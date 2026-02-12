@@ -5,6 +5,7 @@ import subprocess
 import time
 import traceback
 import webbrowser
+from datetime import date
 from pathlib import Path
 from typing import Dict, Any
 
@@ -89,7 +90,7 @@ class MainWindow(QMainWindow):
         sync_menu.addAction(clone_missing_action)
 
         sync_with_repair_action = QAction("Sync with &Repair", self)
-        sync_with_repair_action.setShortcut(QKeySequence("Ctrl+R"))
+        sync_with_repair_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         sync_with_repair_action.triggered.connect(self.sync_with_repair)
         sync_menu.addAction(sync_with_repair_action)
 
@@ -158,7 +159,7 @@ class MainWindow(QMainWindow):
         tools_menu.addAction(token_info_action)
 
         ssh_info_action = QAction("&SSH Configuration", self)
-        ssh_info_action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+        ssh_info_action.setShortcut(QKeySequence("Ctrl+Alt+S"))
         ssh_info_action.triggered.connect(self.show_ssh_info)
         tools_menu.addAction(ssh_info_action)
 
@@ -1245,7 +1246,7 @@ class MainWindow(QMainWindow):
                 ("Ctrl+S", "Synchronize All"),
                 ("Ctrl+U", "Update Needed Only"),
                 ("Ctrl+M", "Clone Missing Only"),
-                ("Ctrl+R", "Sync with Repair"),
+                ("Ctrl+Shift+R", "Sync with Repair"),
                 ("Ctrl+Shift+S", "Sync Selected"),
                 ("Ctrl+Shift+C", "Clone Selected"),
                 ("Ctrl+Shift+U", "Update Selected")
@@ -1260,7 +1261,7 @@ class MainWindow(QMainWindow):
             ("Tools", [
                 ("Ctrl+I", "User Information"),
                 ("Ctrl+T", "Token Information"),
-                ("Ctrl+Shift+S", "SSH Configuration"),
+                ("Ctrl+Alt+S", "SSH Configuration"),
                 ("Ctrl+Shift+N", "Network Information"),
                 ("Ctrl+Shift+M", "Storage Management")
             ]),
@@ -1791,7 +1792,7 @@ class MainWindow(QMainWindow):
         about_text = f"""
         <h2>Smart Repository Manager</h2>
         <p>Version: {ver}</p>
-        <p>© 2026 Alexander Suvorov. All rights reserved.</p>
+        <p>© {str(date.today().year)} Alexander Suvorov. All rights reserved.</p>
 
         <p>A powerful tool for managing GitHub repositories with advanced synchronization capabilities.</p>
 
