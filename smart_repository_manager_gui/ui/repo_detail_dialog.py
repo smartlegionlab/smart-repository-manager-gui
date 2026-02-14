@@ -3,21 +3,32 @@ import webbrowser
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget, QGridLayout, QTextEdit, QGroupBox, QFrame
+    QScrollArea, QWidget, QGridLayout, QTextEdit, QGroupBox, QFrame, QMessageBox, QMenu
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QFont, QAction
 from smart_repository_manager_core.core.models.repository import Repository
 
 from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
 
+
 class RepoDetailDialog(QDialog):
-    def __init__(self, repository=None, parent=None):
+    clone_requested = pyqtSignal(object)
+    update_requested = pyqtSignal(object)
+    reclone_requested = pyqtSignal(object)
+    delete_requested = pyqtSignal(object)
+
+    status_updated = pyqtSignal()
+
+    def __init__(self, repository=None, parent=None, app_state=None):
         super().__init__(parent)
         self.repository = repository or Repository()
+        self.app_state = app_state
+        self.parent_window = parent
         self.setWindowTitle(f"{self.repository.name} - Repository Details")
         self.setMinimumSize(700, 600)
         self.setup_ui()
+        self.update_display_info()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -73,7 +84,7 @@ class RepoDetailDialog(QDialog):
 
         content_layout.addStretch()
 
-        self.create_action_buttons(content_layout)
+        self.create_bottom_buttons(content_layout)
 
         scroll_area.setWidget(content_widget)
         main_layout.addWidget(scroll_area)
@@ -82,20 +93,20 @@ class RepoDetailDialog(QDialog):
         header_layout = QVBoxLayout()
         header_layout.setSpacing(10)
 
-        name_label = QLabel(self.repository.name)
+        self.name_label = QLabel(self.repository.name)
         name_font = QFont()
         name_font.setPointSize(18)
         name_font.setBold(True)
-        name_label.setFont(name_font)
-        name_label.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR};")
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setFont(name_font)
+        self.name_label.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR};")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        full_name_label = QLabel(self.repository.full_name)
-        full_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        full_name_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
+        self.full_name_label = QLabel(self.repository.full_name)
+        self.full_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.full_name_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
 
-        header_layout.addWidget(name_label)
-        header_layout.addWidget(full_name_label)
+        header_layout.addWidget(self.name_label)
+        header_layout.addWidget(self.full_name_label)
 
         parent_layout.addLayout(header_layout)
 
@@ -121,11 +132,11 @@ class RepoDetailDialog(QDialog):
         layout = QVBoxLayout()
         layout.setContentsMargins(15, 25, 15, 15)
 
-        desc_text = QTextEdit()
-        desc_text.setPlainText(self.repository.description)
-        desc_text.setReadOnly(True)
-        desc_text.setMaximumHeight(120)
-        desc_text.setStyleSheet(f"""
+        self.desc_text = QTextEdit()
+        self.desc_text.setPlainText(self.repository.description)
+        self.desc_text.setReadOnly(True)
+        self.desc_text.setMaximumHeight(120)
+        self.desc_text.setStyleSheet(f"""
             QTextEdit {{
                 background-color: transparent;
                 border: none;
@@ -136,13 +147,13 @@ class RepoDetailDialog(QDialog):
             }}
         """)
 
-        layout.addWidget(desc_text)
+        layout.addWidget(self.desc_text)
         group.setLayout(layout)
         parent_layout.addWidget(group)
 
     def create_info_section(self, parent_layout):
-        group = QGroupBox("Repository Information")
-        group.setStyleSheet(f"""
+        self.info_group = QGroupBox("Repository Information")
+        self.info_group.setStyleSheet(f"""
             QGroupBox {{
                 color: {ModernDarkTheme.TEXT_PRIMARY};
                 font-weight: bold;
@@ -159,48 +170,44 @@ class RepoDetailDialog(QDialog):
             }}
         """)
 
-        layout = QGridLayout()
-        layout.setSpacing(12)
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 2)
+        self.info_layout = QGridLayout()
+        self.info_layout.setSpacing(12)
+        self.info_layout.setColumnStretch(0, 1)
+        self.info_layout.setColumnStretch(1, 2)
 
-        status_text = "Update Available" if self.repository.need_update else "Up to date"
-        status_color = "#4caf50" if self.repository.need_update else "#ff9800"
-
-        local_text = "Local copy exists" if self.repository.local_exists else "Not cloned locally"
-        local_color = "#4caf50" if self.repository.local_exists else "#f44336"
+        self.info_labels = {}
 
         info_data = [
-            ("URL:", self.repository.html_url),
-            ("Created:", self.repository.created_date),
-            ("Last Update:", self.repository.last_update),
-            ("Status:", status_text),
-            ("Local:", local_text),
-            ("Default Branch:", self.repository.default_branch),
-            ("License:", self.repository.license_name),
-            ("Homepage:", self.repository.homepage or "None")
+            ("URL:", "html_url", self.repository.html_url),
+            ("Created:", "created_date", self.repository.created_date),
+            ("Last Update:", "last_update", self.repository.last_update),
+            ("Status:", "status", "Update Available" if self.repository.need_update else "Up to date"),
+            ("Local:", "local", "Local copy exists" if self.repository.local_exists else "Not cloned locally"),
+            ("Default Branch:", "default_branch", self.repository.default_branch),
+            ("License:", "license_name", self.repository.license_name),
+            ("Homepage:", "homepage", self.repository.homepage or "None")
         ]
 
-        for i, (label_text, value) in enumerate(info_data):
+        for i, (label_text, key, value) in enumerate(info_data):
             label = QLabel(label_text)
             label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
-            layout.addWidget(label, i, 0)
+            self.info_layout.addWidget(label, i, 0)
 
             value_widget = QLabel(value)
-            if label_text == "Status:":
-                value_widget.setStyleSheet(f"color: {status_color}; font-size: 12px; font-weight: 500;")
-            elif label_text == "Local:":
-                value_widget.setStyleSheet(f"color: {local_color}; font-size: 12px; font-weight: 500;")
+            if label_text == "Status:" or label_text == "Local:":
+                pass
             else:
                 value_widget.setStyleSheet(f"color: {ModernDarkTheme.TEXT_PRIMARY}; font-size: 12px; font-weight: 500;")
-            layout.addWidget(value_widget, i, 1)
 
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
+            self.info_layout.addWidget(value_widget, i, 1)
+            self.info_labels[key] = value_widget
+
+        self.info_group.setLayout(self.info_layout)
+        parent_layout.addWidget(self.info_group)
 
     def create_stats_section(self, parent_layout):
-        group = QGroupBox("Repository Statistics")
-        group.setStyleSheet(f"""
+        self.stats_group = QGroupBox("Repository Statistics")
+        self.stats_group.setStyleSheet(f"""
             QGroupBox {{
                 color: {ModernDarkTheme.TEXT_PRIMARY};
                 font-weight: bold;
@@ -217,42 +224,46 @@ class RepoDetailDialog(QDialog):
             }}
         """)
 
-        layout = QGridLayout()
-        layout.setSpacing(12)
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 2)
+        self.stats_layout = QGridLayout()
+        self.stats_layout.setSpacing(12)
+        self.stats_layout.setColumnStretch(0, 1)
+        self.stats_layout.setColumnStretch(1, 2)
+
+        self.stats_labels = {}
 
         stats_data = [
-            ("Language:", self.repository.language or "Unknown"),
-            ("Stars:", str(self.repository.stargazers_count)),
-            ("Forks:", str(self.repository.forks_count)),
-            ("Watchers:", str(self.repository.watchers_count)),
-            ("Open Issues:", str(self.repository.open_issues_count)),
-            ("Size:", f"{self.repository.size_mb:.1f} MB"),
-            ("Private:", "Yes" if self.repository.private else "No"),
-            ("Archived:", "Yes" if self.repository.archived else "No")
+            ("Language:", "language", self.repository.language or "Unknown"),
+            ("Stars:", "stargazers_count", str(self.repository.stargazers_count)),
+            ("Forks:", "forks_count", str(self.repository.forks_count)),
+            ("Watchers:", "watchers_count", str(self.repository.watchers_count)),
+            ("Open Issues:", "open_issues_count", str(self.repository.open_issues_count)),
+            ("Size:", "size_mb", f"{self.repository.size_mb:.1f} MB"),
+            ("Private:", "private", "Yes" if self.repository.private else "No"),
+            ("Archived:", "archived", "Yes" if self.repository.archived else "No")
         ]
 
-        for i, (label_text, value) in enumerate(stats_data):
+        for i, (label_text, key, value) in enumerate(stats_data):
             label = QLabel(label_text)
             label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
-            layout.addWidget(label, i, 0)
+            self.stats_layout.addWidget(label, i, 0)
 
             value_widget = QLabel(value)
             value_widget.setStyleSheet(f"color: {ModernDarkTheme.TEXT_PRIMARY}; font-size: 12px; font-weight: 500;")
-            layout.addWidget(value_widget, i, 1)
+            self.stats_layout.addWidget(value_widget, i, 1)
+            self.stats_labels[key] = value_widget
 
-        group.setLayout(layout)
-        parent_layout.addWidget(group)
+        self.stats_group.setLayout(self.stats_layout)
+        parent_layout.addWidget(self.stats_group)
 
-    def create_action_buttons(self, parent_layout):
-        buttons_widget = QWidget()
-        buttons_layout = QHBoxLayout(buttons_widget)
-        buttons_layout.setSpacing(10)
-        buttons_layout.setContentsMargins(0, 20, 0, 0)
+    def create_bottom_buttons(self, parent_layout):
+        bottom_widget = QWidget()
+        bottom_layout = QHBoxLayout(bottom_widget)
+        bottom_layout.setSpacing(10)
+        bottom_layout.setContentsMargins(0, 10, 0, 0)
 
-        open_btn = QPushButton("🌐 Open in Browser")
-        open_btn.setStyleSheet(f"""
+        self.actions_menu_btn = QPushButton("📁 Repo Actions ▼")
+        self.actions_menu_btn.setMinimumWidth(150)
+        self.actions_menu_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {ModernDarkTheme.PRIMARY_COLOR};
                 color: white;
@@ -265,8 +276,40 @@ class RepoDetailDialog(QDialog):
             QPushButton:hover {{
                 background-color: #1a75ff;
             }}
+            QPushButton::menu-indicator {{ 
+                subcontrol-position: right center;
+                subcontrol-origin: padding;
+                left: 8px;
+            }}
         """)
-        open_btn.clicked.connect(self.open_in_browser)
+
+        actions_menu = QMenu(self)
+
+        if not self.repository.local_exists:
+            clone_action = QAction("📥 Clone Repository", self)
+            clone_action.triggered.connect(self._on_clone_clicked)
+            actions_menu.addAction(clone_action)
+        else:
+            if self.repository.need_update:
+                update_action = QAction("🔄 Update Repository", self)
+                update_action.triggered.connect(self._on_update_clicked)
+                actions_menu.addAction(update_action)
+
+            reclone_action = QAction("🔄 Re-clone", self)
+            reclone_action.triggered.connect(self._on_reclone_clicked)
+            actions_menu.addAction(reclone_action)
+
+            delete_action = QAction("🗑️ Delete Local", self)
+            delete_action.triggered.connect(self._on_delete_clicked)
+            actions_menu.addAction(delete_action)
+
+        actions_menu.addSeparator()
+
+        browser_action = QAction("🌐 Open in Browser", self)
+        browser_action.triggered.connect(self.open_in_browser)
+        actions_menu.addAction(browser_action)
+
+        self.actions_menu_btn.setMenu(actions_menu)
 
         close_btn = QPushButton("Close")
         close_btn.setStyleSheet(f"""
@@ -286,18 +329,112 @@ class RepoDetailDialog(QDialog):
         """)
         close_btn.clicked.connect(self.accept)
 
-        buttons_layout.addWidget(open_btn)
-        buttons_layout.addStretch()
-        buttons_layout.addWidget(close_btn)
+        bottom_layout.addWidget(self.actions_menu_btn)
+        bottom_layout.addStretch()
+        bottom_layout.addWidget(close_btn)
 
-        parent_layout.addWidget(buttons_widget)
+        parent_layout.addWidget(bottom_widget)
+
+    def update_display_info(self):
+
+        status_text = "Update Available" if self.repository.need_update else "Up to date"
+        status_color = "#ff9800" if self.repository.need_update else "#4caf50"
+
+        local_text = "Local copy exists" if self.repository.local_exists else "Not cloned locally"
+        local_color = "#4caf50" if self.repository.local_exists else "#f44336"
+
+        if 'status' in self.info_labels:
+            self.info_labels['status'].setText(status_text)
+            self.info_labels['status'].setStyleSheet(f"color: {status_color}; font-size: 12px; font-weight: 500;")
+
+        if 'local' in self.info_labels:
+            self.info_labels['local'].setText(local_text)
+            self.info_labels['local'].setStyleSheet(f"color: {local_color}; font-size: 12px; font-weight: 500;")
+
+        info_updates = {
+            'html_url': self.repository.html_url,
+            'created_date': self.repository.created_date,
+            'last_update': self.repository.last_update,
+            'default_branch': self.repository.default_branch,
+            'license_name': self.repository.license_name,
+            'homepage': self.repository.homepage or "None"
+        }
+
+        for key, value in info_updates.items():
+            if key in self.info_labels:
+                self.info_labels[key].setText(value)
+
+        stats_updates = {
+            'language': self.repository.language or "Unknown",
+            'stargazers_count': str(self.repository.stargazers_count),
+            'forks_count': str(self.repository.forks_count),
+            'watchers_count': str(self.repository.watchers_count),
+            'open_issues_count': str(self.repository.open_issues_count),
+            'size_mb': f"{self.repository.size_mb:.1f} MB",
+            'private': "Yes" if self.repository.private else "No",
+            'archived': "Yes" if self.repository.archived else "No"
+        }
+
+        for key, value in stats_updates.items():
+            if key in self.stats_labels:
+                self.stats_labels[key].setText(value)
+
+        self.setWindowTitle(f"{self.repository.name} - Repository Details")
+
+        self.update_actions_menu()
+
+        self.status_updated.emit()
+
+    def update_actions_menu(self):
+        actions_menu = QMenu(self)
+
+        if not self.repository.local_exists:
+            clone_action = QAction("📥 Clone Repository", self)
+            clone_action.triggered.connect(self._on_clone_clicked)
+            actions_menu.addAction(clone_action)
+        else:
+            if self.repository.need_update:
+                update_action = QAction("🔄 Update Repository", self)
+                update_action.triggered.connect(self._on_update_clicked)
+                actions_menu.addAction(update_action)
+
+            reclone_action = QAction("🔄 Re-clone", self)
+            reclone_action.triggered.connect(self._on_reclone_clicked)
+            actions_menu.addAction(reclone_action)
+
+            delete_action = QAction("🗑️ Delete Local", self)
+            delete_action.triggered.connect(self._on_delete_clicked)
+            actions_menu.addAction(delete_action)
+
+        actions_menu.addSeparator()
+
+        browser_action = QAction("🌐 Open in Browser", self)
+        browser_action.triggered.connect(self.open_in_browser)
+        actions_menu.addAction(browser_action)
+
+        self.actions_menu_btn.setMenu(actions_menu)
+
+    def _on_clone_clicked(self):
+        self.clone_requested.emit(self.repository)
+        QTimer.singleShot(500, self.update_display_info)
+
+    def _on_update_clicked(self):
+        self.update_requested.emit(self.repository)
+        QTimer.singleShot(500, self.update_display_info)
+
+    def _on_reclone_clicked(self):
+        self.reclone_requested.emit(self.repository)
+        QTimer.singleShot(500, self.update_display_info)
+
+    def _on_delete_clicked(self):
+        self.delete_requested.emit(self.repository)
+        QTimer.singleShot(500, self.update_display_info)
 
     def open_in_browser(self):
         if hasattr(self.repository, 'html_url') and self.repository.html_url:
             try:
                 webbrowser.open(self.repository.html_url)
             except Exception as e:
-                from PyQt6.QtWidgets import QMessageBox
                 QMessageBox.warning(
                     self,
                     "Browser Error",
@@ -307,7 +444,6 @@ class RepoDetailDialog(QDialog):
                     QMessageBox.StandardButton.Ok
                 )
         else:
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.warning(
                 self,
                 "URL Not Available",
