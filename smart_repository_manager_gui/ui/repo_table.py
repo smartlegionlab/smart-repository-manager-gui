@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView,
     QProgressBar, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QComboBox, QLineEdit, QMenu
+    QComboBox, QLineEdit, QMenu, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QBrush, QColor
@@ -14,6 +14,15 @@ class OptimizedRepoTable(QWidget):
     row_double_clicked = pyqtSignal(object)
     load_more_requested = pyqtSignal()
     filter_changed = pyqtSignal(str)
+
+    open_in_browser_requested = pyqtSignal(object)
+    open_local_folder_requested = pyqtSignal(object)
+    show_details_requested = pyqtSignal(object)
+
+    clone_repositories_batch = pyqtSignal(list)
+    update_repositories_batch = pyqtSignal(list)
+    reclone_repositories_batch = pyqtSignal(list)
+    delete_repositories_batch = pyqtSignal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -442,17 +451,143 @@ class OptimizedRepoTable(QWidget):
             repo = self.displayed_repos[row]
             self.row_double_clicked.emit(repo)
 
+    def get_repo_at_row(self, row):
+        if 0 <= row < len(self.displayed_repos):
+            return self.displayed_repos[row]
+        return None
+
+    def get_selected_repositories(self):
+        selected_items = self.table_widget.selectedItems()
+        if not selected_items:
+            return []
+
+        selected_rows = set()
+        for item in selected_items:
+            selected_rows.add(item.row())
+
+        repositories = []
+        for row in selected_rows:
+            repo = self.get_repo_at_row(row)
+            if repo:
+                repositories.append(repo)
+
+        return repositories
+
     def show_context_menu(self, position):
         row = self.table_widget.rowAt(position.y())
         if row < 0 or row >= len(self.displayed_repos):
             return
 
-        repo = self.displayed_repos[row]
-        menu = QMenu()
+        repo = self.get_repo_at_row(row)
+        if not repo:
+            return
 
-        open_action = QAction("📂 Open in Browser", self)
-        open_action.triggered.connect(lambda: self.open_in_browser(repo))
-        menu.addAction(open_action)
+        menu = QMenu(self.table_widget)
+        menu.setStyleSheet(f"""
+            QMenu {{
+                background-color: {ModernDarkTheme.CARD_BG};
+                border: 1px solid {ModernDarkTheme.BORDER_COLOR};
+                border-radius: 4px;
+                padding: 4px;
+                color: {ModernDarkTheme.TEXT_PRIMARY};
+            }}
+            QMenu::item {{
+                padding: 6px 24px 6px 24px;
+                border-radius: 3px;
+            }}
+            QMenu::item:selected {{
+                background-color: {ModernDarkTheme.PRIMARY_COLOR};
+                color: white;
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background-color: {ModernDarkTheme.BORDER_COLOR};
+                margin: 4px 8px;
+            }}
+        """)
+
+        selected_repos = self.get_selected_repositories()
+
+        if len(selected_repos) > 1:
+            local_count = sum(1 for r in selected_repos if getattr(r, 'local_exists', False))
+            remote_count = len(selected_repos) - local_count
+            update_count = sum(
+                1 for r in selected_repos if getattr(r, 'local_exists', False) and getattr(r, 'need_update', False))
+
+            stats_action = QAction(f"📊 Selected: {len(selected_repos)} repos", self)
+            stats_action.setEnabled(False)
+            menu.addAction(stats_action)
+            menu.addSeparator()
+
+            if remote_count > 0:
+                clone_selected_action = QAction(f"📥 Clone Missing ({remote_count})", self)
+                clone_selected_action.triggered.connect(lambda: self.clone_repositories_batch.emit(
+                    [r for r in selected_repos if not getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(clone_selected_action)
+
+            if local_count > 0:
+                if update_count > 0:
+                    update_selected_action = QAction(f"🔄 Update Available ({update_count})", self)
+                    update_selected_action.triggered.connect(lambda: self.update_repositories_batch.emit(
+                        [r for r in selected_repos if
+                         getattr(r, 'local_exists', False) and getattr(r, 'need_update', False)]
+                    ))
+                    menu.addAction(update_selected_action)
+
+                reclone_selected_action = QAction(f"🔄 Re-clone All Local ({local_count})", self)
+                reclone_selected_action.triggered.connect(lambda: self.reclone_repositories_batch.emit(
+                    [r for r in selected_repos if getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(reclone_selected_action)
+
+                delete_selected_action = QAction(f"🗑️ Delete All Local ({local_count})", self)
+                delete_selected_action.triggered.connect(lambda: self.delete_repositories_batch.emit(
+                    [r for r in selected_repos if getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(delete_selected_action)
+
+        else:
+            if not repo.local_exists:
+                clone_action = QAction("📥 Clone Repository", self)
+                clone_action.triggered.connect(lambda: self.clone_repositories_batch.emit(
+                    [r for r in selected_repos if not getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(clone_action)
+            else:
+                if repo.need_update:
+                    update_action = QAction("🔄 Update Repository", self)
+                    update_action.triggered.connect(lambda: self.update_repositories_batch.emit(
+                        [r for r in selected_repos if
+                         getattr(r, 'local_exists', False) and getattr(r, 'need_update', False)]
+                    ))
+                    menu.addAction(update_action)
+
+                reclone_action = QAction("🔄 Re-clone Repository", self)
+                reclone_action.triggered.connect(lambda: self.reclone_repositories_batch.emit(
+                    [r for r in selected_repos if getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(reclone_action)
+
+                open_local_action = QAction("📂 Open Local Folder", self)
+                open_local_action.triggered.connect(lambda: self.open_local_folder_requested.emit(repo))
+                menu.addAction(open_local_action)
+
+                delete_action = QAction("🗑️ Delete Local Copy", self)
+                delete_action.triggered.connect(lambda: self.delete_repositories_batch.emit(
+                    [r for r in selected_repos if getattr(r, 'local_exists', False)]
+                ))
+                menu.addAction(delete_action)
+
+            menu.addSeparator()
+
+            open_browser_action = QAction("🌐 Open in Browser", self)
+            open_browser_action.triggered.connect(lambda: self.open_in_browser_requested.emit(repo))
+            menu.addAction(open_browser_action)
+
+            details_action = QAction("ℹ️ Show Details", self)
+            details_action.triggered.connect(lambda: self.show_details_requested.emit(repo))
+            menu.addAction(details_action)
 
         menu.exec(self.table_widget.viewport().mapToGlobal(position))
 

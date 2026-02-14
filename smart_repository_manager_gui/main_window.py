@@ -407,7 +407,102 @@ class MainWindow(QMainWindow):
     def create_optimized_table(self, parent_layout):
         self.repo_table = OptimizedRepoTable()
         self.repo_table.row_double_clicked.connect(self.on_repo_double_clicked)
+
+        self.repo_table.open_in_browser_requested.connect(self.open_repository_in_browser)
+        self.repo_table.open_local_folder_requested.connect(self.open_local_repository_folder)
+        self.repo_table.show_details_requested.connect(self.on_repo_double_clicked)
+
+        self.repo_table.clone_repositories_batch.connect(self.clone_repositories_batch)
+        self.repo_table.update_repositories_batch.connect(self.update_repositories_batch)
+        self.repo_table.reclone_repositories_batch.connect(self.reclone_repositories_batch)
+        self.repo_table.delete_repositories_batch.connect(self.delete_repositories_batch)
+
         parent_layout.addWidget(self.repo_table, 1)
+
+    def clone_single_repository(self, repo):
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        if not username or not token:
+            QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Clone Repository",
+            f"Clone repository '{repo.name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        dialog = SyncDialog(username, token, [repo], "clone_missing", self)
+        dialog.start_sync()
+
+        if dialog.exec():
+            self.repo_table.update_repository_status(repo.name, True, False)
+            QTimer.singleShot(1000, self._force_update_ui)
+
+    def reclone_single_repository(self, repo):
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        if not username or not token:
+            QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            return
+
+        if not repo.local_exists:
+            QMessageBox.warning(
+                self,
+                "Cannot Re-clone",
+                f"Repository '{repo.name}' is not cloned locally.",
+                QMessageBox.StandardButton.Ok
+            )
+            return
+
+        reply = QMessageBox.warning(
+            self,
+            "Re-clone Repository",
+            f"Re-clone repository '{repo.name}'?\n\n"
+            f"This will DELETE the local copy and clone it again from GitHub.\n"
+            f"This action cannot be undone!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        structure_service = StructureService()
+        structure = structure_service.get_user_structure(username)
+
+        if structure and "repositories" in structure:
+            repo_path = structure["repositories"] / repo.name
+            if repo_path.exists():
+                try:
+                    shutil.rmtree(repo_path, ignore_errors=True)
+                except Exception as e:
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        f"Failed to delete local copy: {str(e)}",
+                        QMessageBox.StandardButton.Ok
+                    )
+                    return
+
+        dialog = SyncDialog(username, token, [repo], "clone_missing", self)
+        dialog.start_sync()
+
+        if dialog.exec():
+            self.repo_table.update_repository_status(repo.name, True, False)
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Repository '{repo.name}' re-cloned successfully.",
+                QMessageBox.StandardButton.Ok
+            )
+            QTimer.singleShot(1000, self._force_update_ui)
 
     def create_header(self, parent_layout):
         header_widget = QWidget()
@@ -786,6 +881,10 @@ class MainWindow(QMainWindow):
 
     def on_repo_double_clicked(self, repo):
         dialog = RepoDetailDialog(repo, self)
+        dialog.clone_requested.connect(self.clone_single_repository)
+        dialog.update_requested.connect(self.update_single_repository)
+        dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
+        dialog.delete_requested.connect(self.delete_local_repository)
         dialog.exec()
 
     def open_repository_in_browser(self, repo):
@@ -865,6 +964,7 @@ class MainWindow(QMainWindow):
 
     def update_single_repository(self, repo):
         username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -888,8 +988,8 @@ class MainWindow(QMainWindow):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        dialog = SyncDialog(username, [repo], self)
-        dialog.start_sync("pull")
+        dialog = SyncDialog(username, token, [repo], "update_needed", self)
+        dialog.start_sync()
         result = dialog.exec()
 
         if result == QDialog.DialogCode.Accepted:
@@ -950,6 +1050,157 @@ class MainWindow(QMainWindow):
                 f"Failed to delete: {str(e)}",
                 QMessageBox.StandardButton.Ok
             )
+
+    def clone_repositories_batch(self, repos):
+        if not repos:
+            return
+
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        if not username or not token:
+            QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Clone Repositories",
+            f"Clone {len(repos)} repositories?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        dialog = SyncDialog(username, token, repos, "clone_missing", self)
+        dialog.start_sync()
+
+        if dialog.exec():
+            for repo in repos:
+                self.repo_table.update_repository_status(repo.name, True, False)
+            QTimer.singleShot(1000, self._force_update_ui)
+
+    def update_repositories_batch(self, repos):
+        if not repos:
+            return
+
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        if not username or not token:
+            QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Update Repositories",
+            f"Update {len(repos)} repositories?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        dialog = SyncDialog(username, token, repos, "update_needed", self)
+        dialog.start_sync()
+
+        if dialog.exec():
+            for repo in repos:
+                self.repo_table.update_repository_status(repo.name, True, False)
+            QTimer.singleShot(1000, self._force_update_ui)
+
+    def reclone_repositories_batch(self, repos):
+        if not repos:
+            return
+
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        if not username or not token:
+            QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            return
+
+        reply = QMessageBox.warning(
+            self,
+            "Re-clone Repositories",
+            f"Re-clone {len(repos)} repositories?\n\n"
+            f"This will DELETE local copies and clone them again from GitHub.\n"
+            f"This action cannot be undone!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        dialog = SyncDialog(username, token, repos, "reclone_all", self)
+        dialog.start_sync()
+
+        if dialog.exec():
+            for repo in repos:
+                self.repo_table.update_repository_status(repo.name, True, False)
+
+            QMessageBox.information(
+                self,
+                "Success",
+                f"{len(repos)} repositories re-cloned successfully.",
+                QMessageBox.StandardButton.Ok
+            )
+
+            QTimer.singleShot(1000, self._force_update_ui)
+
+    def delete_repositories_batch(self, repos):
+        if not repos:
+            return
+
+        username = self.app_state.get('current_user')
+        if not username:
+            QMessageBox.warning(self, "Error", "No user selected")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Delete Local Copies",
+            f"Delete local copies of {len(repos)} repositories?\n\nThis action cannot be undone!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        structure_service = StructureService()
+        structure = structure_service.get_user_structure(username)
+
+        if not structure or "repositories" not in structure:
+            QMessageBox.warning(self, "Error", "Storage structure not found")
+            return
+
+        deleted_count = 0
+        for repo in repos:
+            repo_path = structure["repositories"] / repo.name
+            if repo_path.exists():
+                try:
+                    shutil.rmtree(repo_path, ignore_errors=True)
+                    repo.local_exists = False
+                    repo.need_update = True
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"Error deleting {repo.name}: {e}")
+
+        for repo in repos:
+            if repo.local_exists is False:
+                self.repo_table.update_repository_status(repo.name, False, True)
+
+        if deleted_count > 0:
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Deleted {deleted_count} local copies"
+            )
+
+        QTimer.singleShot(1000, self._force_update_ui)
+
 
     def update_available_repositories(self):
         self._start_sync_operation("update_needed")
@@ -1547,6 +1798,10 @@ class MainWindow(QMainWindow):
             return
 
         dialog = RepoDetailDialog(selected_repos[0], self)
+        dialog.clone_requested.connect(self.clone_single_repository)
+        dialog.update_requested.connect(self.update_single_repository)
+        dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
+        dialog.delete_requested.connect(self.delete_local_repository)
         dialog.exec()
 
     def _refresh_repositories(self, wait_dialog):
