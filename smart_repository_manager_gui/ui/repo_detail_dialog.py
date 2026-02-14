@@ -10,6 +10,7 @@ from PyQt6.QtGui import QFont, QAction
 from smart_repository_manager_core.core.models.repository import Repository
 
 from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from smart_repository_manager_gui.ui.zip_download_dialog import ZipDownloadDialog
 
 
 class RepoDetailDialog(QDialog):
@@ -408,11 +409,38 @@ class RepoDetailDialog(QDialog):
 
         actions_menu.addSeparator()
 
+        zip_action = QAction("📦 Download as ZIP", self)
+        zip_action.triggered.connect(self._on_zip_download_clicked)
+        actions_menu.addAction(zip_action)
+
         browser_action = QAction("🌐 Open in Browser", self)
         browser_action.triggered.connect(self.open_in_browser)
         actions_menu.addAction(browser_action)
 
         self.actions_menu_btn.setMenu(actions_menu)
+
+    def _on_zip_download_clicked(self):
+        token = self.app_state.get('current_token') if self.app_state else None
+        username = self.app_state.get('current_user') if self.app_state else None
+
+        if hasattr(self.parent_window, 'repo_table'):
+            selected_repos = self.parent_window.repo_table.get_selected_repositories()
+            if len(selected_repos) > 1:
+                dialog = ZipDownloadDialog(selected_repos, token, username, self)
+                dialog.exec()
+                return
+
+        if hasattr(self.parent_window, 'repo_table'):
+            selected_repos = self.parent_window.repo_table.get_selected_repositories()
+            if len(selected_repos) == 1:
+                repo = selected_repos[0]
+            else:
+                repo = self.repository
+        else:
+            repo = self.repository
+
+        dialog = ZipDownloadDialog([repo], token, username, self)
+        dialog.exec()
 
     def _on_clone_clicked(self):
         self.clone_requested.emit(self.repository)

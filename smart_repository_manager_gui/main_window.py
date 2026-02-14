@@ -11,7 +11,7 @@ from typing import Dict, Any
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QProgressBar, QMessageBox, QDialog, QMenu, QScrollArea
+    QLabel, QPushButton, QFrame, QProgressBar, QMessageBox, QDialog, QMenu, QScrollArea, QApplication
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QAction, QKeySequence
@@ -34,6 +34,7 @@ from smart_repository_manager_gui.ui.token_info_dialog import TokenInfoDialog
 from smart_repository_manager_gui.ui.user_info_dialog import UserInfoDialog
 
 from smart_repository_manager_gui import __version__ as ver
+from smart_repository_manager_gui.ui.zip_download_dialog import ZipDownloadDialog
 
 
 class MainWindow(QMainWindow):
@@ -114,6 +115,12 @@ class MainWindow(QMainWindow):
         update_selected_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
         update_selected_action.triggered.connect(self._update_selected_repositories)
         sync_menu.addAction(update_selected_action)
+
+        sync_menu.addSeparator()
+
+        download_all_zip_action = QAction("📦 Download All as ZIP...", self)
+        download_all_zip_action.triggered.connect(self.download_all_repositories_as_zip)
+        sync_menu.addAction(download_all_zip_action)
 
         repo_menu = menu_bar.addMenu("&Repositories")
 
@@ -669,13 +676,19 @@ class MainWindow(QMainWindow):
             ("Synchronize All", self.sync_all_repositories, "Sync all repositories"),
             ("Clone Missing Only", self.sync_clone_missing, "Clone only missing ones"),
             ("Sync with Repair", self.sync_with_repair, "Synchronize with repairs"),
-            ("Re-clone All", self.sync_reclone_all, "Re-clone all repositories")
+            ("Re-clone All", self.sync_reclone_all, "Re-clone all repositories"),
+            ("---", None, None),
+            ("📦 Download All as ZIP", self.download_all_repositories_as_zip,
+             "Download all repositories as ZIP archives")
         ]
 
         for text, callback, tooltip in actions:
-            action = menu.addAction(text)
-            action.setToolTip(tooltip)
-            action.triggered.connect(callback)
+            if text == "---":
+                menu.addSeparator()
+            else:
+                action = menu.addAction(text)
+                action.setToolTip(tooltip)
+                action.triggered.connect(callback)
 
         menu.exec(self.sync_actions_btn.mapToGlobal(self.sync_actions_btn.rect().bottomLeft()))
 
@@ -1726,6 +1739,44 @@ class MainWindow(QMainWindow):
 
         if dialog.exec():
             self._force_update_ui()
+
+    def download_all_repositories_as_zip(self):
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+        repositories = self.app_state.get('repositories', [])
+
+        if not username:
+            QMessageBox.warning(self, "Warning", "No user selected")
+            return
+
+        if not repositories:
+            QMessageBox.information(self, "Information", "No repositories to download")
+            return
+
+        private_repos = [r for r in repositories if getattr(r, 'private', False)]
+
+        if private_repos and not token:
+            reply = QMessageBox.question(
+                self,
+                "Token Required",
+                f"Found {len(private_repos)} private repositories that require a token.\n\n"
+                f"Without a token, only public repositories will be downloaded.\n\n"
+                f"Continue with public repositories only?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+            repositories = [r for r in repositories if not getattr(r, 'private', False)]
+
+        if not repositories:
+            QMessageBox.information(self, "Information", "No repositories to download after filtering")
+            return
+
+        dialog = ZipDownloadDialog(repositories, token, username, self)
+        dialog.exec()
 
     def _open_selected_in_browser(self):
         selected_repos = self._get_selected_repositories()
