@@ -582,7 +582,7 @@ class MainWindow(QMainWindow):
                 """)
         self.update_available_btn.setVisible(False)
 
-        self.sync_actions_btn = QPushButton("🔄 Sync Actions")
+        self.sync_actions_btn = QPushButton("🔄 Sync Actions ▼")
         self.sync_actions_btn.setMinimumWidth(80)
         self.sync_actions_btn.clicked.connect(self.show_sync_actions_menu)
         self.sync_actions_btn.setStyleSheet(f"""
