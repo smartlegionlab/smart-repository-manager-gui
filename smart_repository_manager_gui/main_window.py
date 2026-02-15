@@ -678,7 +678,7 @@ class MainWindow(QMainWindow):
             ("Sync with Repair", self.sync_with_repair, "Synchronize with repairs"),
             ("Re-clone All", self.sync_reclone_all, "Re-clone all repositories"),
             ("---", None, None),
-            ("📦 Download All as ZIP", self.download_all_repositories_as_zip,
+            ("Download All as ZIP", self.download_all_repositories_as_zip,
              "Download all repositories as ZIP archives")
         ]
 
@@ -893,7 +893,7 @@ class MainWindow(QMainWindow):
             wait_dialog.close()
 
     def on_repo_double_clicked(self, repo):
-        dialog = RepoDetailDialog(repo, self)
+        dialog = RepoDetailDialog(repo, self, app_state=self.app_state)
         dialog.clone_requested.connect(self.clone_single_repository)
         dialog.update_requested.connect(self.update_single_repository)
         dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
@@ -1848,7 +1848,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select only one repository")
             return
 
-        dialog = RepoDetailDialog(selected_repos[0], self)
+        dialog = RepoDetailDialog(selected_repos[0], self, app_state=self.app_state)
         dialog.clone_requested.connect(self.clone_single_repository)
         dialog.update_requested.connect(self.update_single_repository)
         dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
