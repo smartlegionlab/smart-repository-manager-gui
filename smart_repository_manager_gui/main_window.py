@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
 
         sync_menu.addSeparator()
 
-        download_all_zip_action = QAction("📦 Download All as ZIP...", self)
+        download_all_zip_action = QAction("Download All as ZIP...", self)
         download_all_zip_action.triggered.connect(self.download_all_repositories_as_zip)
         sync_menu.addAction(download_all_zip_action)
 
