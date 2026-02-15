@@ -1,4 +1,4 @@
-# Smart Repository Manager GUI <sup>v1.0.1</sup>
+# Smart Repository Manager GUI <sup>v1.0.2</sup>
 
 A powerful desktop application for managing GitHub repositories with intelligent synchronization, SSH configuration, and comprehensive visual management tools.
 
@@ -166,6 +166,12 @@ cat ~/.ssh/id_ed25519.pub  # Copy this output
 # Verify connection
 ssh -T git@github.com
 ```
+
+### Generate GitHub Token
+1. Visit [GitHub Tokens](https://github.com/settings/tokens/new)
+2. Select permissions:
+   - ✅ `repo` (full repository access)
+3. Generate and copy token
 
 After that, install and run the application:
 
