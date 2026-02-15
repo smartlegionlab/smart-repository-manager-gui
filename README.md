@@ -54,6 +54,9 @@ Advanced recovery - detects and fixes corrupted repositories, then syncs.
 ### **5. Re-clone All** 
 Complete refresh - removes and re-clones all local repositories.
 
+### **6. Download All As Zip**
+Complete download - download all repositories as ZIP archives.
+
 **Live Console**: Every sync operation displays real-time logs with timestamp, status, and duration for each repository.
 
 ---
@@ -140,10 +143,32 @@ Complete refresh - removes and re-clones all local repositories.
 ### Prerequisites
 - Python 3.8+
 - Git installed and configured
+- An initialized SSH key with a GitHub account.
 - GitHub Personal Access Token (with `repo` scope)
 - PyQt6
 
-### Setup
+### Setup SSH 
+
+Before using the application, you need to initialize your SSH key:
+
+```bash
+# Generate SSH key
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Add to ssh-agent
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+# Add to GitHub account
+cat ~/.ssh/id_ed25519.pub  # Copy this output
+# Paste at https://github.com/settings/keys
+
+# Verify connection
+ssh -T git@github.com
+```
+
+After that, install and run the application:
+
 ```bash
 # Clone repository
 git clone https://github.com/smartlegionlab/smart-repository-manager-gui.git
@@ -174,6 +199,7 @@ python app.py
 ├── username_1/             # User-specific directories
 │   ├── repositories/       # Local Git repositories
 │   ├── archives/          # ZIP backups
+│   ├── downloads/          # Downloaded repositories as ZIP archives
 │   ├── logs/             # Operation logs
 │   ├── backups/          # Manual backups
 │   ├── temp/             # Temporary files
