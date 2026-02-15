@@ -83,6 +83,33 @@ class StorageAnalysisThread(QThread):
         self.is_running = False
 
 
+class FolderPathLabel(QLabel):
+    clicked = pyqtSignal(str)
+
+    def __init__(self, text="", path=""):
+        super().__init__(text)
+        self.path = path
+        self.setStyleSheet("""
+            QLabel {
+                color: #4d94ff;
+                text-decoration: underline;
+                padding: 2px 5px;
+                border-radius: 3px;
+            }
+            QLabel:hover {
+                background-color: #2a2a2a;
+                color: #6aafff;
+            }
+        """)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(f"Click to open: {path}")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit(self.path)
+        super().mousePressEvent(event)
+
+
 class StorageManagementDialog(QDialog):
     def __init__(self, app_state, parent=None):
         super().__init__(parent)
@@ -150,13 +177,13 @@ class StorageManagementDialog(QDialog):
         overview_layout.addWidget(self.overview_widget)
         layout.addWidget(overview_group)
 
-        folders_group = QGroupBox("Folder Statistics")
+        folders_group = QGroupBox("Folder Locations")
         folders_layout = QVBoxLayout(folders_group)
 
         self.folders_widget = QWidget()
         self.folders_layout = QGridLayout(self.folders_widget)
         self.folders_layout.setColumnStretch(0, 1)
-        self.folders_layout.setColumnStretch(1, 1)
+        self.folders_layout.setColumnStretch(1, 2)
         self.folders_layout.setColumnStretch(2, 1)
 
         folders_layout.addWidget(self.folders_widget)
@@ -300,46 +327,59 @@ class StorageManagementDialog(QDialog):
         row = 0
         self.add_info_row(self.overview_layout, row, "User:", f"@{self.username}")
         row += 1
-        self.add_info_row(self.overview_layout, row, "Storage Path:", storage_info.get("path", "N/A"))
+
+        storage_path = storage_info.get("path", "N/A")
+        path_label = QLabel(storage_path)
+        path_label.setStyleSheet("color: #4d94ff; text-decoration: underline; padding: 2px 5px;")
+        path_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        path_label.setToolTip(f"Click to open: {storage_path}")
+        path_label.mousePressEvent = lambda e, p=storage_path: self.open_folder(
+            p) if e.button() == Qt.MouseButton.LeftButton else None
+
+        self.overview_layout.addWidget(QLabel("Storage Path:"), row, 0)
+        self.overview_layout.addWidget(path_label, row, 1)
         row += 1
+
         self.add_info_row(self.overview_layout, row, "Repositories:", str(storage_info.get("repo_count", 0)))
         row += 1
         self.add_info_row(self.overview_layout, row, "Total Size:",
                           f"{storage_info.get('total_size_mb', 0):.2f} MB")
 
         if "folders" in storage_info:
+            folder_types = [
+                ("repositories", "📚 Repositories"),
+                ("archives", "📦 Archives"),
+                ("backups", "💾 Backups"),
+                ("logs", "📝 Logs"),
+                ("temp", "🗑️ Temp")
+            ]
+
             row = 0
-            for folder_type, folder_info in storage_info["folders"].items():
-                if row >= 6:
-                    break
+            for folder_key, display_name in folder_types:
+                if folder_key in storage_info["folders"]:
+                    folder_info = storage_info["folders"][folder_key]
+                    folder_path = folder_info.get("path", "")
+                    size_mb = folder_info.get("size_mb", 0)
+                    item_count = folder_info.get("item_count", 0)
 
-                size_mb = folder_info.get("size_mb", 0)
-                item_count = folder_info.get("item_count", 0)
+                    name_label = QLabel(display_name)
+                    name_label.setStyleSheet("font-weight: bold;")
 
-                col = (row % 3) * 2
-                actual_row = row // 3
+                    if folder_path and Path(folder_path).exists():
+                        path_label = FolderPathLabel(folder_path, folder_path)
+                        path_label.clicked.connect(self.open_folder)
+                    else:
+                        path_label = QLabel("Path not available")
+                        path_label.setStyleSheet("color: #6c757d;")
 
-                icon = "📁"
-                if folder_type == "repositories":
-                    icon = "📚"
-                elif folder_type == "archives":
-                    icon = "📦"
-                elif folder_type == "logs":
-                    icon = "📝"
-                elif folder_type == "backups":
-                    icon = "💾"
-                elif folder_type == "temp":
-                    icon = "🗑️"
+                    stats_label = QLabel(f"{size_mb:.1f} MB, {item_count} items")
+                    stats_label.setStyleSheet("color: #6c757d; font-size: 11px;")
 
-                name_label = QLabel(f"{icon} {folder_type.capitalize()}")
-                name_label.setStyleSheet("font-weight: bold;")
+                    self.folders_layout.addWidget(name_label, row, 0)
+                    self.folders_layout.addWidget(path_label, row, 1)
+                    self.folders_layout.addWidget(stats_label, row, 2)
 
-                info_label = QLabel(f"{size_mb:.1f} MB, {item_count} items")
-                info_label.setStyleSheet("color: #6c757d; font-size: 11px;")
-
-                self.folders_layout.addWidget(name_label, actual_row, col)
-                self.folders_layout.addWidget(info_label, actual_row, col + 1)
-                row += 1
+                    row += 1
 
         if "disk_usage" in storage_info and "error" not in storage_info["disk_usage"]:
             disk_info = storage_info["disk_usage"]
@@ -546,15 +586,30 @@ class StorageManagementDialog(QDialog):
             repo_path = Path(storage_info["folders"]["repositories"]["path"]) / repo_name
 
             if repo_path.exists():
-                try:
-                    if os.name == 'nt':
-                        os.startfile(str(repo_path))
-                    elif os.name == 'posix':
-                        subprocess.run(['xdg-open', str(repo_path)], check=False)
-                    else:
-                        subprocess.run(['open', str(repo_path)], check=False)
-                except Exception as e:
-                    QMessageBox.warning(self, "Error", f"Cannot open folder: {str(e)}")
+                self.open_folder(str(repo_path))
+
+    def open_folder(self, folder_path: str):
+        try:
+            if not folder_path or not Path(folder_path).exists():
+                QMessageBox.warning(
+                    self,
+                    "Folder Not Found",
+                    f"Folder does not exist:\n{folder_path}"
+                )
+                return
+
+            if os.name == 'nt':
+                os.startfile(folder_path)
+            elif os.name == 'posix':
+                subprocess.run(['xdg-open', folder_path], check=False)
+            else:
+                subprocess.run(['open', folder_path], check=False)
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Error",
+                f"Cannot open folder: {str(e)}"
+            )
 
     def update_repo_buttons(self):
         has_selection = len(self.repos_table.selectedItems()) > 0
