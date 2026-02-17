@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from smart_repository_manager_core.utils.helpers import Helpers
 
 
-class ZipService:
+class DownloadService:
 
     def __init__(self):
         self.download_cache = {}

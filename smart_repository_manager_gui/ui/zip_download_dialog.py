@@ -12,7 +12,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QFont
 
 from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
-from smart_repository_manager_gui.core.zip_service import ZipService
+from smart_repository_manager_gui.core.download_service import DownloadService
 
 
 class ZipDownloadWorker(QThread):
@@ -112,7 +112,7 @@ class ZipDownloadDialog(QDialog):
         self.repositories = repositories or []
         self.token = token
         self.username = username
-        self.zip_service = ZipService()
+        self.zip_service = DownloadService()
         self.worker = None
         self.results_data = []
 
