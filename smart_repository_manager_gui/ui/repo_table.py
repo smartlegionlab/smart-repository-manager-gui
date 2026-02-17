@@ -10,7 +10,7 @@ from PyQt6.QtGui import QAction, QBrush, QColor
 from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
 
 
-class OptimizedRepoTable(QWidget):
+class RepoTable(QWidget):
     row_double_clicked = pyqtSignal(object)
     load_more_requested = pyqtSignal()
     filter_changed = pyqtSignal(str)
@@ -23,6 +23,8 @@ class OptimizedRepoTable(QWidget):
     update_repositories_batch = pyqtSignal(list)
     reclone_repositories_batch = pyqtSignal(list)
     delete_repositories_batch = pyqtSignal(list)
+
+    download_repositories_batch = pyqtSignal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -547,6 +549,12 @@ class OptimizedRepoTable(QWidget):
                 ))
                 menu.addAction(delete_selected_action)
 
+                menu.addSeparator()
+                download_selected_action = QAction(f"📦 Download repositories ({len(selected_repos)})", self)
+                download_selected_action.triggered.connect(
+                    lambda: self.download_repositories_batch.emit(selected_repos))
+                menu.addAction(download_selected_action)
+
         else:
             if not repo.local_exists:
                 clone_action = QAction("📥 Clone Repository", self)
@@ -580,6 +588,10 @@ class OptimizedRepoTable(QWidget):
                 menu.addAction(delete_action)
 
             menu.addSeparator()
+
+            download_action = QAction("📦 Download Repository", self)
+            download_action.triggered.connect(lambda: self.download_repositories_batch.emit([repo]))
+            menu.addAction(download_action)
 
             open_browser_action = QAction("🌐 Open in Browser", self)
             open_browser_action.triggered.connect(lambda: self.open_in_browser_requested.emit(repo))

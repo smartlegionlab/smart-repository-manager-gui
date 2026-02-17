@@ -27,7 +27,7 @@ from smart_repository_manager_gui.ui.folder_info_dialog import StorageManagement
 from smart_repository_manager_gui.ui.network_info_dialog import NetworkInfoDialog
 from smart_repository_manager_gui.ui.repo_detail_dialog import RepoDetailDialog
 from smart_repository_manager_gui.ui.preloader import SmartPreloader
-from smart_repository_manager_gui.ui.repo_table import OptimizedRepoTable
+from smart_repository_manager_gui.ui.repo_table import RepoTable
 from smart_repository_manager_gui.ui.ssh_info_dialog import SSHInfoDialog
 from smart_repository_manager_gui.ui.sync_dialogue import SyncDialog
 from smart_repository_manager_gui.ui.token_info_dialog import TokenInfoDialog
@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
 
         sync_menu.addSeparator()
 
-        download_all_zip_action = QAction("Download All as ZIP...", self)
+        download_all_zip_action = QAction("Download All Repositories...", self)
         download_all_zip_action.triggered.connect(self.download_all_repositories_as_zip)
         sync_menu.addAction(download_all_zip_action)
 
@@ -412,7 +412,7 @@ class MainWindow(QMainWindow):
         return widget
 
     def create_optimized_table(self, parent_layout):
-        self.repo_table = OptimizedRepoTable()
+        self.repo_table = RepoTable()
         self.repo_table.row_double_clicked.connect(self.on_repo_double_clicked)
 
         self.repo_table.open_in_browser_requested.connect(self.open_repository_in_browser)
@@ -423,6 +423,8 @@ class MainWindow(QMainWindow):
         self.repo_table.update_repositories_batch.connect(self.update_repositories_batch)
         self.repo_table.reclone_repositories_batch.connect(self.reclone_repositories_batch)
         self.repo_table.delete_repositories_batch.connect(self.delete_repositories_batch)
+
+        self.repo_table.download_repositories_batch.connect(self.download_repositories_batch)
 
         parent_layout.addWidget(self.repo_table, 1)
 
@@ -678,7 +680,7 @@ class MainWindow(QMainWindow):
             ("Sync with Repair", self.sync_with_repair, "Synchronize with repairs"),
             ("Re-clone All", self.sync_reclone_all, "Re-clone all repositories"),
             ("---", None, None),
-            ("Download All as ZIP", self.download_all_repositories_as_zip,
+            ("Download All Repositories", self.download_all_repositories_as_zip,
              "Download all repositories as ZIP archives")
         ]
 
@@ -1776,6 +1778,16 @@ class MainWindow(QMainWindow):
             return
 
         dialog = RepoDownloadDialog(repositories, token, username, self)
+        dialog.exec()
+
+    def download_repositories_batch(self, repos):
+        if not repos:
+            return
+
+        username = self.app_state.get('current_user')
+        token = self.app_state.get('current_token')
+
+        dialog = RepoDownloadDialog(repos, token, username, self)
         dialog.exec()
 
     def _open_selected_in_browser(self):

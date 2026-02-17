@@ -409,9 +409,9 @@ class RepoDetailDialog(QDialog):
 
         actions_menu.addSeparator()
 
-        zip_action = QAction("📦 Download as ZIP", self)
-        zip_action.triggered.connect(self._on_zip_download_clicked)
-        actions_menu.addAction(zip_action)
+        download_action = QAction("📦 Download repository", self)
+        download_action.triggered.connect(self._on_download_clicked)
+        actions_menu.addAction(download_action)
 
         browser_action = QAction("🌐 Open in Browser", self)
         browser_action.triggered.connect(self.open_in_browser)
@@ -419,7 +419,7 @@ class RepoDetailDialog(QDialog):
 
         self.actions_menu_btn.setMenu(actions_menu)
 
-    def _on_zip_download_clicked(self):
+    def _on_download_clicked(self):
         token = self.app_state.get('current_token') if self.app_state else None
         username = self.app_state.get('current_user') if self.app_state else None
 
