@@ -437,7 +437,7 @@ class NetworkInfoDialog(QDialog):
 
     @pyqtSlot(bool, str)
     def on_github_check_complete(self, git_ok: bool, git_msg: str):
-        git_text = f"✅ {git_msg}" if git_ok else f"❌ {git_msg}"
+        git_text = f"✅ {git_msg}" if git_ok else "❌ Unable to connect to GitHub"
         git_color = "#4caf50" if git_ok else "#f44336"
         self.git_status_label.setText(git_text)
         self.git_status_label.setStyleSheet(f"color: {git_color}; font-weight: 500;")
