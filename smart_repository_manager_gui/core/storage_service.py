@@ -165,35 +165,38 @@ class StorageService:
         except Exception as e:
             return {"success": False, "error": f"Error deleting repositories: {str(e)}"}
 
-    def cleanup_temp_files(self, username: str) -> Dict[str, Any]:
+    def cleanup_archives(self, username: str) -> Dict[str, Any]:
         try:
             if not username:
                 return {"success": False, "error": "Username not provided"}
 
             structure = self.structure_service.get_user_structure(username)
-            if "temp" not in structure:
-                return {"success": False, "error": "Temp directory not found in structure"}
+            if "archives" not in structure:
+                return {"success": False, "error": "Archives directory not found in structure"}
 
-            temp_path = structure["temp"]
+            archives_path = structure["archives"]
 
-            if not temp_path.exists():
-                return {"success": False, "error": "Temp directory doesn't exist"}
+            if not archives_path.exists():
+                return {"success": False, "error": "Archives directory doesn't exist"}
 
             deleted_count = 0
             total_size = 0
+            deleted_files = []
 
-            for item in temp_path.iterdir():
+            for item in archives_path.iterdir():
                 try:
                     if item.is_file():
                         file_size = item.stat().st_size
                         item.unlink()
                         deleted_count += 1
                         total_size += file_size
+                        deleted_files.append(item.name)
                     elif item.is_dir():
                         dir_size = self._get_folder_size(item)
                         shutil.rmtree(item, ignore_errors=True)
                         deleted_count += 1
                         total_size += dir_size
+                        deleted_files.append(item.name)
                 except Exception as e:
                     print(f"Error deleting {item}: {e}")
                     continue
@@ -202,14 +205,65 @@ class StorageService:
 
             return {
                 "success": True,
-                "message": f"Cleaned {deleted_count} items ({Helpers.format_size(total_size)})",
+                "message": f"Cleaned {deleted_count} archive items ({Helpers.format_size(total_size)})",
                 "deleted_count": deleted_count,
                 "total_size_bytes": total_size,
-                "total_size_formatted": Helpers.format_size(total_size)
+                "total_size_formatted": Helpers.format_size(total_size),
+                "deleted_files": deleted_files
             }
 
         except Exception as e:
-            return {"success": False, "error": f"Error cleaning temp files: {str(e)}"}
+            return {"success": False, "error": f"Error cleaning archives: {str(e)}"}
+
+    def cleanup_logs(self, username: str) -> Dict[str, Any]:
+        try:
+            if not username:
+                return {"success": False, "error": "Username not provided"}
+
+            structure = self.structure_service.get_user_structure(username)
+            if "logs" not in structure:
+                return {"success": False, "error": "Logs directory not found in structure"}
+
+            logs_path = structure["logs"]
+
+            if not logs_path.exists():
+                return {"success": False, "error": "Logs directory doesn't exist"}
+
+            deleted_count = 0
+            total_size = 0
+            deleted_files = []
+
+            for item in logs_path.iterdir():
+                try:
+                    if item.is_file():
+                        file_size = item.stat().st_size
+                        item.unlink()
+                        deleted_count += 1
+                        total_size += file_size
+                        deleted_files.append(item.name)
+                    elif item.is_dir():
+                        dir_size = self._get_folder_size(item)
+                        shutil.rmtree(item, ignore_errors=True)
+                        deleted_count += 1
+                        total_size += dir_size
+                        deleted_files.append(item.name)
+                except Exception as e:
+                    print(f"Error deleting {item}: {e}")
+                    continue
+
+            self._clear_cache(username)
+
+            return {
+                "success": True,
+                "message": f"Cleaned {deleted_count} log items ({Helpers.format_size(total_size)})",
+                "deleted_count": deleted_count,
+                "total_size_bytes": total_size,
+                "total_size_formatted": Helpers.format_size(total_size),
+                "deleted_files": deleted_files
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"Error cleaning logs: {str(e)}"}
 
     def get_repository_details(self, username: str, repo_name: str) -> Dict[str, Any]:
         try:

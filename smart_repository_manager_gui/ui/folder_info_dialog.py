@@ -247,13 +247,76 @@ class StorageManagementDialog(QDialog):
         layout = QVBoxLayout(widget)
         layout.setSpacing(20)
 
+        archives_group = QGroupBox("Archives Cleanup")
+        archives_layout = QVBoxLayout(archives_group)
+
+        self.archives_info_label = QLabel("Checking archives...")
+        self.clean_archives_btn = QPushButton("📦 Clean Archives")
+        self.clean_archives_btn.clicked.connect(self.cleanup_archives)
+        self.clean_archives_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff9800;
+                color: white;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #e68900;
+            }
+            QPushButton:disabled {
+                background-color: #808080;
+                color: #cccccc;
+            }
+        """)
+
+        archives_layout.addWidget(self.archives_info_label)
+        archives_layout.addWidget(self.clean_archives_btn)
+        layout.addWidget(archives_group)
+
+        logs_group = QGroupBox("Logs Cleanup")
+        logs_layout = QVBoxLayout(logs_group)
+
+        self.logs_info_label = QLabel("Checking logs...")
+        self.clean_logs_btn = QPushButton("📝 Clean Logs")
+        self.clean_logs_btn.clicked.connect(self.cleanup_logs)
+        self.clean_logs_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196f3;
+                color: white;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976d2;
+            }
+            QPushButton:disabled {
+                background-color: #808080;
+                color: #cccccc;
+            }
+        """)
+
+        logs_layout.addWidget(self.logs_info_label)
+        logs_layout.addWidget(self.clean_logs_btn)
+        layout.addWidget(logs_group)
+
         delete_group = QGroupBox("Repository Management")
         delete_layout = QVBoxLayout(delete_group)
 
         self.delete_all_info_label = QLabel("Warning: This will delete ALL local repositories")
         self.delete_all_btn = QPushButton("⚠️ Delete All Repositories")
         self.delete_all_btn.clicked.connect(self.delete_all_repositories)
-        self.delete_all_btn.setStyleSheet("background-color: #dc3545; color: white;")
+        self.delete_all_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #dc3545;
+                color: white;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #c82333;
+            }
+            QPushButton:disabled {
+                background-color: #808080;
+                color: #cccccc;
+            }
+        """)
 
         delete_layout.addWidget(self.delete_all_info_label)
         delete_layout.addWidget(self.delete_all_btn)
@@ -434,6 +497,40 @@ class StorageManagementDialog(QDialog):
         self.repos_table.sortItems(1, Qt.SortOrder.DescendingOrder)
 
     def update_cleanup_tab(self, storage_info: dict):
+        if "folders" in storage_info and "archives" in storage_info["folders"]:
+            archives_info = storage_info["folders"]["archives"]
+            size_mb = archives_info.get("size_mb", 0)
+            item_count = archives_info.get("item_count", 0)
+
+            if item_count > 0:
+                self.archives_info_label.setText(
+                    f"Found {item_count} archive files ({size_mb:.1f} MB)"
+                )
+                self.clean_archives_btn.setEnabled(True)
+            else:
+                self.archives_info_label.setText("No archives found")
+                self.clean_archives_btn.setEnabled(False)
+        else:
+            self.archives_info_label.setText("Archives directory not found")
+            self.clean_archives_btn.setEnabled(False)
+
+        if "folders" in storage_info and "logs" in storage_info["folders"]:
+            logs_info = storage_info["folders"]["logs"]
+            size_mb = logs_info.get("size_mb", 0)
+            item_count = logs_info.get("item_count", 0)
+
+            if item_count > 0:
+                self.logs_info_label.setText(
+                    f"Found {item_count} log files ({size_mb:.1f} MB)"
+                )
+                self.clean_logs_btn.setEnabled(True)
+            else:
+                self.logs_info_label.setText("No logs found")
+                self.clean_logs_btn.setEnabled(False)
+        else:
+            self.logs_info_label.setText("Logs directory not found")
+            self.clean_logs_btn.setEnabled(False)
+
         repo_count = storage_info.get("repo_count", 0)
         if repo_count > 0:
             self.delete_all_info_label.setText(
@@ -579,6 +676,61 @@ class StorageManagementDialog(QDialog):
             item = layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+
+    def cleanup_archives(self):
+        if not self.username:
+            return
+
+        reply = QMessageBox.question(
+            self, "Confirm Cleanup",
+            f"Are you sure you want to clean archives?\n\n"
+            f"This action cannot be undone!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        result = self.storage_service.cleanup_archives(self.username)
+
+        if result.get("success"):
+            QMessageBox.information(
+                self, "Success",
+                f"Cleaned {result.get('deleted_count', 0)} archive items\n"
+                f"Freed: {result.get('total_size_formatted', '0 B')}"
+            )
+            self.last_cleanup_label.setText(
+                f"Last cleanup: Archives - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            )
+            self.refresh_storage_info()
+        else:
+            QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))
+
+    def cleanup_logs(self):
+        reply = QMessageBox.question(
+            self, "Confirm Cleanup",
+            f"Are you sure you want to clean logs?\n\n"
+            f"This action cannot be undone!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        result = self.storage_service.cleanup_logs(self.username)
+
+        if result.get("success"):
+            QMessageBox.information(
+                self, "Success",
+                f"Cleaned {result.get('deleted_count', 0)} log items\n"
+                f"Freed: {result.get('total_size_formatted', '0 B')}"
+            )
+            self.last_cleanup_label.setText(
+                f"Last cleanup: Logs - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            )
+            self.refresh_storage_info()
+        else:
+            QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))
 
     def closeEvent(self, event):
         if self.analysis_thread and self.analysis_thread.isRunning():
