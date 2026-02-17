@@ -2,6 +2,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import time
 import traceback
 import webbrowser
@@ -53,6 +54,12 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
+
+        switch_user_action = QAction("&Switch User...", self)
+        switch_user_action.triggered.connect(self._switch_user)
+        file_menu.addAction(switch_user_action)
+
+        file_menu.addSeparator()
 
         create_archive_action = QAction("Create &Archive...", self)
         create_archive_action.setShortcut(QKeySequence("Ctrl+B"))
@@ -1801,8 +1808,8 @@ class MainWindow(QMainWindow):
             if hasattr(repo, 'html_url') and repo.html_url:
                 try:
                     webbrowser.open(repo.html_url)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error: {e}")
 
         if len(selected_repos) == 1:
             QMessageBox.information(self, "Success", f"Opened {selected_repos[0].name} in browser")
@@ -1841,8 +1848,8 @@ class MainWindow(QMainWindow):
                     else:
                         subprocess.run(['open', str(repo_path)], check=False)
                     opened_count += 1
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error: {3}")
 
         if opened_count > 0:
             QMessageBox.information(self, "Success", f"Opened {opened_count} local folders")
@@ -1977,8 +1984,8 @@ class MainWindow(QMainWindow):
                     repo.local_exists = False
                     repo.need_update = True
                     deleted_count += 1
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error: {e}")
 
         self._force_update_ui()
 
@@ -2088,8 +2095,8 @@ class MainWindow(QMainWindow):
                 for action in menu.actions():
                     if action.text() != "E&xit":
                         action.setEnabled(enabled)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error: {e}")
 
     def _open_folder(self, folder_path: Path):
         try:
@@ -2206,6 +2213,51 @@ class MainWindow(QMainWindow):
         summary += f"  • Average per repo: {self.format_duration(avg_time)}"
 
         QMessageBox.information(self, "Sync Summary", summary)
+
+    def _switch_user(self):
+        if hasattr(self, 'repo_table') and self.repo_table.is_loading:
+            reply = QMessageBox.warning(
+                self,
+                "Operations in Progress",
+                "Repository operations are still in progress.\n\n"
+                "Switching user will cancel these operations.\n\n"
+                "Continue anyway?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        reply = QMessageBox.question(
+            self,
+            "Switch User",
+            "This will restart the application to switch to a different GitHub account.\n\n"
+            "All unsaved data will be preserved in the configuration.\n\n"
+            "Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Restarting...")
+        msg.setText("Switching user. Please wait...")
+        msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
+        msg.show()
+
+        QApplication.processEvents()
+
+        QTimer.singleShot(500, lambda: self._perform_restart(msg))
+
+    def _perform_restart(self, msg_box=None):
+        if msg_box:
+            msg_box.close()
+            msg_box.deleteLater()
+
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
