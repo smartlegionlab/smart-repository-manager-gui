@@ -34,7 +34,7 @@ from smart_repository_manager_gui.ui.token_info_dialog import TokenInfoDialog
 from smart_repository_manager_gui.ui.user_info_dialog import UserInfoDialog
 
 from smart_repository_manager_gui import __version__ as ver
-from smart_repository_manager_gui.ui.zip_download_dialog import ZipDownloadDialog
+from smart_repository_manager_gui.ui.repo_download_dialog import RepoDownloadDialog
 
 
 class MainWindow(QMainWindow):
@@ -1775,7 +1775,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Information", "No repositories to download after filtering")
             return
 
-        dialog = ZipDownloadDialog(repositories, token, username, self)
+        dialog = RepoDownloadDialog(repositories, token, username, self)
         dialog.exec()
 
     def _open_selected_in_browser(self):

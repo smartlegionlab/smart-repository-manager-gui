@@ -15,7 +15,7 @@ from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_gui.core.download_service import DownloadService
 
 
-class ZipDownloadWorker(QThread):
+class RepoDownloadWorker(QThread):
     progress_update = pyqtSignal(int, int, str)
     repo_complete = pyqtSignal(dict)
     all_complete = pyqtSignal(dict)
@@ -62,18 +62,6 @@ class ZipDownloadWorker(QThread):
                         token=self.token,
                         username=self.username
                     )
-                else:
-                    branch = getattr(repo, 'default_branch', 'main')
-                    if branch not in ['main', 'master']:
-                        branch = 'main'
-
-                    result = self.zip_service.download_repository_zip(
-                        repo_name=repo_name,
-                        repo_url=repo_url,
-                        branch=branch,
-                        token=self.token,
-                        username=self.username
-                    )
 
                 repo_result = {
                     'repo': repo_name,
@@ -106,7 +94,7 @@ class ZipDownloadWorker(QThread):
         self._is_running = False
 
 
-class ZipDownloadDialog(QDialog):
+class RepoDownloadDialog(QDialog):
     def __init__(self, repositories=None, token=None, username=None, parent=None):
         super().__init__(parent)
         self.repositories = repositories or []
@@ -242,7 +230,7 @@ class ZipDownloadDialog(QDialog):
         options_layout.addWidget(mode_label, 0, 0)
 
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Main branch only", "All branches"])
+        self.mode_combo.addItems(["All branches"])
         self.mode_combo.setMinimumWidth(200)
         self.mode_combo.setStyleSheet(f"""
             QComboBox {{
@@ -542,14 +530,15 @@ class ZipDownloadDialog(QDialog):
         self.failed_label.setText("❌ Failed: 0")
         self.current_label.setText("Current: -")
 
-        mode_text = "ALL BRANCHES" if download_all_branches else "MAIN BRANCH ONLY"
-        self._add_log_entry(f"🚀 Starting batch download of {len(self.repositories)} repositories...", "#4dabf7")
+        mode_text = "ALL BRANCHES"
+        self._add_log_entry(f"🚀 Starting batch download of {len(self.repositories)} repositories...",
+                            "#4dabf7")
         self._add_log_entry(f"👤 User: @{self.username}" if self.username else "", "#4dabf7")
         self._add_log_entry(f"📁 Mode: {mode_text}", "#4dabf7")
         self._add_log_entry(f"📂 Target: {self.location_label.text()}", "#4dabf7")
         self._add_log_entry("", "")
 
-        self.worker = ZipDownloadWorker(
+        self.worker = RepoDownloadWorker(
             zip_service=self.zip_service,
             repositories=self.repositories,
             token=self.token,

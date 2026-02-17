@@ -10,7 +10,7 @@ from PyQt6.QtGui import QFont, QAction
 from smart_repository_manager_core.core.models.repository import Repository
 
 from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
-from smart_repository_manager_gui.ui.zip_download_dialog import ZipDownloadDialog
+from smart_repository_manager_gui.ui.repo_download_dialog import RepoDownloadDialog
 
 
 class RepoDetailDialog(QDialog):
@@ -426,7 +426,7 @@ class RepoDetailDialog(QDialog):
         if hasattr(self.parent_window, 'repo_table'):
             selected_repos = self.parent_window.repo_table.get_selected_repositories()
             if len(selected_repos) > 1:
-                dialog = ZipDownloadDialog(selected_repos, token, username, self)
+                dialog = RepoDownloadDialog(selected_repos, token, username, self)
                 dialog.exec()
                 return
 
@@ -439,7 +439,7 @@ class RepoDetailDialog(QDialog):
         else:
             repo = self.repository
 
-        dialog = ZipDownloadDialog([repo], token, username, self)
+        dialog = RepoDownloadDialog([repo], token, username, self)
         dialog.exec()
 
     def _on_clone_clicked(self):
