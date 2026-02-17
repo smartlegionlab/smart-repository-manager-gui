@@ -109,12 +109,25 @@ class TokenInfoDialog(QDialog):
         self.created_label = QLabel()
         self.last_used_label = QLabel()
 
+        self.token_label = QLabel()
+        self.token_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.token_label.setStyleSheet(f"""
+            color: {ModernDarkTheme.TEXT_PRIMARY}; 
+            font-size: 12px; 
+            font-weight: 500;
+            font-family: 'Monospace';
+            background-color: #2a2a2a;
+            padding: 4px 8px;
+            border-radius: 4px;
+        """)
+
         labels = [
             ("Token Status:", self.token_status_label),
             ("Scopes:", self.token_scopes_label),
             ("Active User:", self.active_user_label),
             ("Created:", self.created_label),
-            ("Last Used:", self.last_used_label)
+            ("Last Used:", self.last_used_label),
+            ("Token:", self.token_label)
         ]
 
         for i, (label_text, widget) in enumerate(labels):
@@ -228,6 +241,7 @@ class TokenInfoDialog(QDialog):
             token_info = self.app_state.get('token_info')
             rate_limits = self.app_state.get('rate_limits')
             current_user = self.app_state.get('current_user')
+            current_token = self.app_state.get('current_token')
 
             if not token_info:
                 self.refresh_token_data()
@@ -247,6 +261,10 @@ class TokenInfoDialog(QDialog):
             self.created_label.setText(created)
 
             self.last_used_label.setText("Now")
+
+            token = token_info.get('token') or current_token
+
+            self.token_label.setText(token)
 
             if rate_limits:
                 self.limit_label.setText(str(rate_limits.get('limit', '?')))
@@ -285,8 +303,6 @@ class TokenInfoDialog(QDialog):
 
     def refresh_token_data(self):
         try:
-
-
             current_token = self.app_state.get('current_token')
             current_user = self.app_state.get('current_user')
 
@@ -330,7 +346,8 @@ class TokenInfoDialog(QDialog):
                 'scopes': token_info.scopes or "Not specified",
                 'rate_limit': token_info.rate_limit,
                 'rate_remaining': token_info.rate_remaining,
-                'created_at': token_info.created_at[:10] if token_info.created_at else "Unknown"
+                'created_at': token_info.created_at[:10] if token_info.created_at else "Unknown",
+                'token': current_token
             }
             self.app_state.update(
                 token_info=token_data,
@@ -354,8 +371,8 @@ class TokenInfoDialog(QDialog):
                 try:
                     reset_time = datetime.fromtimestamp(int(limits["reset"]))
                     reset_time_str = reset_time.strftime("%Y-%m-%d %H:%M:%S")
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error: {e}")
 
             rate_limits = {
                 'limit': limits.get('limit'),
