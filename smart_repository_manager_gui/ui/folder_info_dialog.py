@@ -247,17 +247,6 @@ class StorageManagementDialog(QDialog):
         layout = QVBoxLayout(widget)
         layout.setSpacing(20)
 
-        temp_group = QGroupBox("Temporary Files Cleanup")
-        temp_layout = QVBoxLayout(temp_group)
-
-        self.temp_info_label = QLabel("Checking temporary files...")
-        self.clean_temp_btn = QPushButton("🧹 Clean Temporary Files")
-        self.clean_temp_btn.clicked.connect(self.cleanup_temp_files)
-
-        temp_layout.addWidget(self.temp_info_label)
-        temp_layout.addWidget(self.clean_temp_btn)
-        layout.addWidget(temp_group)
-
         delete_group = QGroupBox("Repository Management")
         delete_layout = QVBoxLayout(delete_group)
 
@@ -349,9 +338,7 @@ class StorageManagementDialog(QDialog):
             folder_types = [
                 ("repositories", "📚 Repositories"),
                 ("archives", "📦 Archives"),
-                ("backups", "💾 Backups"),
                 ("logs", "📝 Logs"),
-                ("temp", "🗑️ Temp")
             ]
 
             row = 0
@@ -447,20 +434,6 @@ class StorageManagementDialog(QDialog):
         self.repos_table.sortItems(1, Qt.SortOrder.DescendingOrder)
 
     def update_cleanup_tab(self, storage_info: dict):
-        if "folders" in storage_info and "temp" in storage_info["folders"]:
-            temp_info = storage_info["folders"]["temp"]
-            size_mb = temp_info.get("size_mb", 0)
-            item_count = temp_info.get("item_count", 0)
-
-            if item_count > 0:
-                self.temp_info_label.setText(
-                    f"Found {item_count} temporary files ({size_mb:.1f} MB)"
-                )
-                self.clean_temp_btn.setEnabled(True)
-            else:
-                self.temp_info_label.setText("No temporary files found")
-                self.clean_temp_btn.setEnabled(False)
-
         repo_count = storage_info.get("repo_count", 0)
         if repo_count > 0:
             self.delete_all_info_label.setText(
@@ -480,31 +453,6 @@ class StorageManagementDialog(QDialog):
         self.refresh_btn.setText("Refreshing...")
 
         self.start_storage_analysis()
-
-    def cleanup_temp_files(self):
-        if not self.username:
-            return
-
-        reply = QMessageBox.question(
-            self, "Confirm Cleanup",
-            "Are you sure you want to clean temporary files?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        result = self.storage_service.cleanup_temp_files(self.username)
-
-        if result.get("success"):
-            QMessageBox.information(
-                self, "Success",
-                f"Cleaned {result.get('deleted_count', 0)} items\n"
-                f"Freed: {result.get('total_size_formatted', '0 B')}"
-            )
-            self.refresh_storage_info()
-        else:
-            QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))
 
     def delete_all_repositories(self):
         if not self.username:
