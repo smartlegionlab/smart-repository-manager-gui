@@ -37,7 +37,7 @@ class RepoDownloadWorker(QThread):
             failed = 0
             total_repos = len(self.repositories)
 
-            for i, repo in enumerate(self.repositories, 1):
+            for i, repo in enumerate(self.repositories, 0):
                 if not self._is_running:
                     break
 
@@ -556,7 +556,7 @@ class RepoDownloadDialog(QDialog):
     @pyqtSlot(int, int, str)
     def on_progress_update(self, current: int, total: int, repo_name: str):
         self.progress_bar.setValue(current)
-        self.completed_label.setText(f"Completed: {current}/{total}")
+        self.completed_label.setText(f"Downloading: {current}/{total}")
         self.current_label.setText(f"Current: {repo_name}")
 
     @pyqtSlot(dict)
@@ -568,21 +568,35 @@ class RepoDownloadDialog(QDialog):
         if success:
             repo_result = result['result']
             if repo_result.get('success'):
-                if 'results' in repo_result:  # All branches mode
+                if 'results' in repo_result:
                     successful = repo_result.get('successful', 0)
                     failed = repo_result.get('failed', 0)
                     total = repo_result.get('total_branches', 0)
 
                     icon = "🔒" if is_private else "🌍"
+
+                    if failed == 0:
+                        status = "✅"
+                        repo_status = "all branches"
+                    elif successful > 0 and failed > 0:
+                        status = "⚠️"
+                        repo_status = f"{successful}/{total} branches"
+                    else:
+                        status = "❌"
+                        repo_status = "failed"
+
                     self._add_log_entry(
-                        f"✅ {icon} {repo_name}: Downloaded {successful}/{total} branches",
-                        "#4caf50"
+                        f"{status} {icon} {repo_name}: Downloaded {repo_status}",
+                        "#ff9800" if successful > 0 and failed > 0 else "#4caf50" if failed == 0 else "#f44336"
                     )
 
-                    current_success = int(self.successful_label.text().split(': ')[1])
-                    current_failed = int(self.failed_label.text().split(': ')[1])
-                    self.successful_label.setText(f"✅ Successful: {current_success + successful}")
-                    self.failed_label.setText(f"❌ Failed: {current_failed + failed}")
+                    if successful > 0:
+                        current_success = int(self.successful_label.text().split(': ')[1])
+                        self.successful_label.setText(f"✅ Successful: {current_success + 1}")
+
+                    if failed == total:
+                        current_failed = int(self.failed_label.text().split(': ')[1])
+                        self.failed_label.setText(f"❌ Failed: {current_failed + 1}")
                 else:
                     icon = "🔒" if is_private else "🌍"
                     size = repo_result.get('size_formatted', '0 B')
@@ -619,13 +633,29 @@ class RepoDownloadDialog(QDialog):
         self.mode_combo.setEnabled(True)
         self.open_folder_btn.setEnabled(True)
 
+        successful_repos = 0
+        failed_repos = 0
+
+        for result in stats.get('results', []):
+            if result.get('success'):
+                repo_result = result.get('result', {})
+                if 'results' in repo_result:
+                    if repo_result.get('successful', 0) > 0:
+                        successful_repos += 1
+                    else:
+                        failed_repos += 1
+                else:
+                    successful_repos += 1
+            else:
+                failed_repos += 1
+
         self._add_log_entry("", "")
         self._add_log_entry("=" * 50, "#4dabf7")
         self._add_log_entry(f"📊 BATCH DOWNLOAD COMPLETE", "#4dabf7")
         self._add_log_entry(f"   • Total: {stats['total']}", "#4dabf7")
-        self._add_log_entry(f"   • ✅ Successful: {stats['successful']}", "#4caf50")
-        if stats['failed'] > 0:
-            self._add_log_entry(f"   • ❌ Failed: {stats['failed']}", "#f44336")
+        self._add_log_entry(f"   • ✅ Successful: {successful_repos}", "#4caf50")
+        if failed_repos > 0:
+            self._add_log_entry(f"   • ❌ Failed: {failed_repos}", "#f44336")
         self._add_log_entry(f"   • 📁 Location: {self.location_label.text()}", "#4dabf7")
         self._add_log_entry("=" * 50, "#4dabf7")
 
@@ -633,8 +663,8 @@ class RepoDownloadDialog(QDialog):
             QMessageBox.information(
                 self,
                 "Download Complete",
-                f"Downloaded {stats['successful']} of {stats['total']} repositories\n"
-                f"Failed: {stats['failed']}\n\n"
+                f"Downloaded {successful_repos} of {stats['total']} repositories\n"
+                f"Failed: {failed_repos}\n\n"
                 f"Files saved to:\n{self.location_label.text()}"
             )
 
