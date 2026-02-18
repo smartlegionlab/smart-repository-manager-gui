@@ -46,7 +46,7 @@ Complete bidirectional sync - clones missing repositories and updates existing o
 Smart update detection - only pulls repositories with new commits.
 
 ### **3. Clone Missing Only** `(Ctrl+M)`
-Selective cloning - downloads only repositories not present locally.
+Selective cloning - cloning only repositories not present locally.
 
 ### **4. Sync with Repair** `(Ctrl+R)`
 Advanced recovery - detects and fixes corrupted repositories, then syncs.
@@ -55,7 +55,7 @@ Advanced recovery - detects and fixes corrupted repositories, then syncs.
 Complete refresh - removes and re-clones all local repositories.
 
 ### **6. Download All As Zip**
-Complete download - download all repositories as ZIP archives.
+Complete parallel download - download all repositories as ZIP archives.
 
 **Live Console**: Every sync operation displays real-time logs with timestamp, status, and duration for each repository.
 
