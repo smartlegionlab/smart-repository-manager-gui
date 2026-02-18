@@ -1,6 +1,9 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 from pathlib import Path
 from datetime import datetime
+import multiprocessing
+import concurrent.futures
+import threading
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -30,6 +33,14 @@ class RepoDownloadWorker(QThread):
         self.download_all_branches = download_all_branches
         self._is_running = True
 
+        try:
+            self.cpu_count = multiprocessing.cpu_count()
+            self.max_workers = max(1, self.cpu_count - 1)
+        except:
+            self.max_workers = 4
+
+        print(f"🚀 RepoDownloadWorker: Using {self.max_workers} parallel workers (CPU cores: {self.cpu_count})")
+
     def run(self):
         try:
             results = []
@@ -37,46 +48,124 @@ class RepoDownloadWorker(QThread):
             failed = 0
             total_repos = len(self.repositories)
 
-            for i, repo in enumerate(self.repositories, 0):
+            lock = threading.Lock()
+            progress_lock = threading.Lock()
+
+            completed = 0
+
+            print(f"📦 Starting parallel download of {total_repos} repositories with {self.max_workers} workers")
+
+            def download_single_repo(repo):
                 if not self._is_running:
-                    break
+                    return None
 
                 repo_name = repo.name
                 repo_url = repo.html_url if hasattr(repo, 'html_url') else None
+                is_private = getattr(repo, 'private', False)
 
                 if not repo_url:
-                    results.append({
+                    return {
                         'repo': repo_name,
                         'success': False,
-                        'error': 'No URL available'
-                    })
-                    failed += 1
-                    continue
+                        'error': 'No URL available',
+                        'is_private': is_private
+                    }
 
-                self.progress_update.emit(i, total_repos, repo_name)
+                try:
+                    if self.download_all_branches:
+                        result = self.zip_service.download_repository_with_all_branches(
+                            repo_name=repo_name,
+                            repo_url=repo_url,
+                            token=self.token,
+                            username=self.username,
+                            verbose=False
+                        )
+                    else:
+                        result = self.zip_service.download_repository_zip(
+                            repo_name=repo_name,
+                            repo_url=repo_url,
+                            token=self.token,
+                            username=self.username
+                        )
 
-                if self.download_all_branches:
-                    result = self.zip_service.download_repository_with_all_branches(
-                        repo_name=repo_name,
-                        repo_url=repo_url,
-                        token=self.token,
-                        username=self.username
-                    )
+                    repo_result = {
+                        'repo': repo_name,
+                        'success': result.get('success', False),
+                        'result': result,
+                        'is_private': is_private
+                    }
 
-                repo_result = {
-                    'repo': repo_name,
-                    'success': result.get('success', False),
-                    'result': result,
-                    'is_private': getattr(repo, 'private', False)
+                except Exception as e:
+                    repo_result = {
+                        'repo': repo_name,
+                        'success': False,
+                        'error': str(e),
+                        'is_private': is_private
+                    }
+
+                return repo_result
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                future_to_repo = {
+                    executor.submit(download_single_repo, repo): repo
+                    for repo in self.repositories
                 }
 
-                results.append(repo_result)
-                self.repo_complete.emit(repo_result)
+                for future in concurrent.futures.as_completed(future_to_repo):
+                    if not self._is_running:
+                        for f in future_to_repo:
+                            f.cancel()
+                        break
 
-                if result.get('success'):
-                    successful += 1
-                else:
-                    failed += 1
+                    repo = future_to_repo[future]
+
+                    try:
+                        repo_result = future.result(timeout=60)
+
+                        if repo_result is None:
+                            continue
+
+                        with lock:
+                            results.append(repo_result)
+
+                            if repo_result.get('success'):
+                                successful += 1
+                            else:
+                                failed += 1
+
+                            with progress_lock:
+                                completed += 1
+                                self.progress_update.emit(completed, total_repos, repo.name)
+
+                            self.repo_complete.emit(repo_result)
+
+                    except concurrent.futures.TimeoutError:
+                        error_result = {
+                            'repo': repo.name,
+                            'success': False,
+                            'error': 'Download timeout',
+                            'is_private': getattr(repo, 'private', False)
+                        }
+                        with lock:
+                            results.append(error_result)
+                            failed += 1
+                            completed += 1
+                            self.progress_update.emit(completed, total_repos, repo.name)
+                            self.repo_complete.emit(error_result)
+
+                    except Exception as e:
+                        error_result = {
+                            'repo': repo.name,
+                            'success': False,
+                            'error': str(e),
+                            'is_private': getattr(repo, 'private', False)
+                        }
+                        with lock:
+                            results.append(error_result)
+                            failed += 1
+                            completed += 1
+                            self.progress_update.emit(completed, total_repos, repo.name)
+                            self.repo_complete.emit(error_result)
 
             self.all_complete.emit({
                 'success': successful > 0,
@@ -84,7 +173,8 @@ class RepoDownloadWorker(QThread):
                 'successful': successful,
                 'failed': failed,
                 'results': results,
-                'username': self.username
+                'username': self.username,
+                'workers_used': self.max_workers
             })
 
         except Exception as e:
@@ -103,6 +193,11 @@ class RepoDownloadDialog(QDialog):
         self.zip_service = DownloadService()
         self.worker = None
         self.results_data = []
+
+        try:
+            self.cpu_count = multiprocessing.cpu_count()
+        except:
+            self.cpu_count = 4
 
         repo_count = len(self.repositories)
         if repo_count == 1:
@@ -193,7 +288,8 @@ class RepoDownloadDialog(QDialog):
 
             subtitle_label = QLabel(
                 f"Downloading {repo_count} repositories "
-                f"(🌍 {public_count} public, 🔒 {private_count} private)"
+                f"(🌍 {public_count} public, 🔒 {private_count} private) "
+                f"⚡ {self.cpu_count} CPU cores available"
             )
             subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             subtitle_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
@@ -244,9 +340,21 @@ class RepoDownloadDialog(QDialog):
         """)
         options_layout.addWidget(self.mode_combo, 0, 1)
 
+        parallel_label = QLabel(f"⚡ Parallel downloads:")
+        parallel_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
+        options_layout.addWidget(parallel_label, 1, 0)
+
+        parallel_value = QLabel(f"Up to {max(1, self.cpu_count - 1)} simultaneous downloads")
+        parallel_value.setStyleSheet(f"""
+            color: {ModernDarkTheme.PRIMARY_COLOR};
+            font-size: 12px;
+            font-weight: bold;
+        """)
+        options_layout.addWidget(parallel_value, 1, 1)
+
         location_label = QLabel("Save to:")
         location_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
-        options_layout.addWidget(location_label, 1, 0)
+        options_layout.addWidget(location_label, 2, 0)
 
         if self.username:
             downloads_dir = Path.home() / "smart_repository_manager" / self.username / "downloads"
@@ -263,7 +371,7 @@ class RepoDownloadDialog(QDialog):
             border-radius: 4px;
         """)
         self.location_label.setWordWrap(True)
-        options_layout.addWidget(self.location_label, 1, 1)
+        options_layout.addWidget(self.location_label, 2, 1)
 
         private_repos = [r for r in self.repositories if getattr(r, 'private', False)]
         if private_repos and not self.token:
@@ -278,7 +386,7 @@ class RepoDownloadDialog(QDialog):
                 border: 1px solid #ff9800;
                 border-radius: 4px;
             """)
-            options_layout.addWidget(self.token_warning, 2, 0, 1, 2)
+            options_layout.addWidget(self.token_warning, 3, 0, 1, 2)
 
         options_group.setLayout(options_layout)
         parent_layout.addWidget(options_group)
@@ -306,17 +414,19 @@ class RepoDownloadDialog(QDialog):
         stats_layout.setSpacing(10)
 
         self.total_label = QLabel(f"Total: {len(self.repositories)}")
-        self.completed_label = QLabel("Completed: 0")
+        self.completed_label = QLabel("Downloading: 0")
         self.successful_label = QLabel("✅ Successful: 0")
         self.failed_label = QLabel("❌ Failed: 0")
         self.current_label = QLabel("Current: -")
+        self.parallel_label = QLabel(f"⚡ Parallel: {max(1, self.cpu_count - 1)} threads")
 
         labels = [
             (self.total_label, 0, 0),
             (self.completed_label, 0, 1),
-            (self.successful_label, 1, 0),
-            (self.failed_label, 1, 1),
-            (self.current_label, 2, 0, 1, 2)
+            (self.parallel_label, 1, 0, 1, 2),
+            (self.successful_label, 2, 0),
+            (self.failed_label, 2, 1),
+            (self.current_label, 3, 0, 1, 2)
         ]
 
         for widget, row, col, *span in labels:
@@ -413,8 +523,8 @@ class RepoDownloadDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
 
-        self.start_btn = QPushButton("▶ Start Download")
-        self.start_btn.setMinimumWidth(150)
+        self.start_btn = QPushButton("▶ Start Parallel Download")
+        self.start_btn.setMinimumWidth(180)
         self.start_btn.clicked.connect(self.start_download)
         self.start_btn.setStyleSheet(f"""
             QPushButton {{
@@ -525,14 +635,15 @@ class RepoDownloadDialog(QDialog):
         self.results_text.clear()
         self.results_data.clear()
 
-        self.completed_label.setText("Completed: 0")
+        self.completed_label.setText("Downloading: 0")
         self.successful_label.setText("✅ Successful: 0")
         self.failed_label.setText("❌ Failed: 0")
         self.current_label.setText("Current: -")
 
         mode_text = "ALL BRANCHES"
-        self._add_log_entry(f"🚀 Starting batch download of {len(self.repositories)} repositories...",
+        self._add_log_entry(f"🚀 Starting PARALLEL download of {len(self.repositories)} repositories...",
                             "#4dabf7")
+        self._add_log_entry(f"⚡ Using up to {max(1, self.cpu_count - 1)} parallel threads", "#4dabf7")
         self._add_log_entry(f"👤 User: @{self.username}" if self.username else "", "#4dabf7")
         self._add_log_entry(f"📁 Mode: {mode_text}", "#4dabf7")
         self._add_log_entry(f"📂 Target: {self.location_label.text()}", "#4dabf7")
@@ -556,67 +667,56 @@ class RepoDownloadDialog(QDialog):
     @pyqtSlot(int, int, str)
     def on_progress_update(self, current: int, total: int, repo_name: str):
         self.progress_bar.setValue(current)
-        self.completed_label.setText(f"Downloading: {current}/{total}")
+        self.completed_label.setText(f"Completed: {current}/{total}")
         self.current_label.setText(f"Current: {repo_name}")
 
     @pyqtSlot(dict)
     def on_repo_complete(self, result: dict):
         repo_name = result['repo']
-        success = result['success']
+        success = result.get('success', False)
         is_private = result.get('is_private', False)
+        error = result.get('error', '')
 
         if success:
-            repo_result = result['result']
-            if repo_result.get('success'):
-                if 'results' in repo_result:
-                    successful = repo_result.get('successful', 0)
-                    failed = repo_result.get('failed', 0)
-                    total = repo_result.get('total_branches', 0)
+            repo_result = result.get('result', {})
 
-                    icon = "🔒" if is_private else "🌍"
+            if 'results' in repo_result:
+                successful_branches = repo_result.get('successful', 0)
+                failed_branches = repo_result.get('failed', 0)
+                total_branches = repo_result.get('total_branches', 0)
 
-                    if failed == 0:
-                        status = "✅"
-                        repo_status = "all branches"
-                    elif successful > 0 and failed > 0:
-                        status = "⚠️"
-                        repo_status = f"{successful}/{total} branches"
-                    else:
-                        status = "❌"
-                        repo_status = "failed"
+                icon = "🔒" if is_private else "🌍"
 
-                    self._add_log_entry(
-                        f"{status} {icon} {repo_name}: Downloaded {repo_status}",
-                        "#ff9800" if successful > 0 and failed > 0 else "#4caf50" if failed == 0 else "#f44336"
-                    )
-
-                    if successful > 0:
-                        current_success = int(self.successful_label.text().split(': ')[1])
-                        self.successful_label.setText(f"✅ Successful: {current_success + 1}")
-
-                    if failed == total:
-                        current_failed = int(self.failed_label.text().split(': ')[1])
-                        self.failed_label.setText(f"❌ Failed: {current_failed + 1}")
+                if failed_branches == 0:
+                    status = "✅"
+                    branch_status = f"all {total_branches} branches"
+                    color = "#4caf50"
+                elif successful_branches > 0 and failed_branches > 0:
+                    status = "⚠️"
+                    branch_status = f"{successful_branches}/{total_branches} branches"
+                    color = "#ff9800"
                 else:
-                    icon = "🔒" if is_private else "🌍"
-                    size = repo_result.get('size_formatted', '0 B')
-                    self._add_log_entry(
-                        f"✅ {icon} {repo_name}: Downloaded ({size})",
-                        "#4caf50"
-                    )
+                    status = "❌"
+                    branch_status = "failed"
+                    color = "#f44336"
 
+                self._add_log_entry(
+                    f"{status} {icon} {repo_name}: Downloaded {branch_status}",
+                    color
+                )
+
+                if successful_branches > 0:
                     current_success = int(self.successful_label.text().split(': ')[1])
                     self.successful_label.setText(f"✅ Successful: {current_success + 1}")
-            else:
-                self._add_log_entry(
-                    f"❌ {repo_name}: {repo_result.get('error', 'Unknown error')}",
-                    "#f44336"
-                )
-                current_failed = int(self.failed_label.text().split(': ')[1])
-                self.failed_label.setText(f"❌ Failed: {current_failed + 1}")
+
+                if failed_branches == total_branches:
+                    current_failed = int(self.failed_label.text().split(': ')[1])
+                    self.failed_label.setText(f"❌ Failed: {current_failed + 1}")
+
         else:
+            error_msg = error or result.get('result', {}).get('error', 'Unknown error')
             self._add_log_entry(
-                f"❌ {repo_name}: {result.get('error', 'Unknown error')}",
+                f"❌ {repo_name}: {error_msg}",
                 "#f44336"
             )
             current_failed = int(self.failed_label.text().split(': ')[1])
@@ -633,38 +733,26 @@ class RepoDownloadDialog(QDialog):
         self.mode_combo.setEnabled(True)
         self.open_folder_btn.setEnabled(True)
 
-        successful_repos = 0
-        failed_repos = 0
-
-        for result in stats.get('results', []):
-            if result.get('success'):
-                repo_result = result.get('result', {})
-                if 'results' in repo_result:
-                    if repo_result.get('successful', 0) > 0:
-                        successful_repos += 1
-                    else:
-                        failed_repos += 1
-                else:
-                    successful_repos += 1
-            else:
-                failed_repos += 1
+        workers_used = stats.get('workers_used', 'N/A')
 
         self._add_log_entry("", "")
         self._add_log_entry("=" * 50, "#4dabf7")
-        self._add_log_entry(f"📊 BATCH DOWNLOAD COMPLETE", "#4dabf7")
+        self._add_log_entry(f"📊 PARALLEL DOWNLOAD COMPLETE", "#4dabf7")
         self._add_log_entry(f"   • Total: {stats['total']}", "#4dabf7")
-        self._add_log_entry(f"   • ✅ Successful: {successful_repos}", "#4caf50")
-        if failed_repos > 0:
-            self._add_log_entry(f"   • ❌ Failed: {failed_repos}", "#f44336")
+        self._add_log_entry(f"   • ✅ Successful: {stats['successful']}", "#4caf50")
+        if stats['failed'] > 0:
+            self._add_log_entry(f"   • ❌ Failed: {stats['failed']}", "#f44336")
+        self._add_log_entry(f"   • ⚡ Parallel threads used: {workers_used}", "#4dabf7")
         self._add_log_entry(f"   • 📁 Location: {self.location_label.text()}", "#4dabf7")
         self._add_log_entry("=" * 50, "#4dabf7")
 
         if stats['total'] > 1:
             QMessageBox.information(
                 self,
-                "Download Complete",
-                f"Downloaded {successful_repos} of {stats['total']} repositories\n"
-                f"Failed: {failed_repos}\n\n"
+                "Parallel Download Complete",
+                f"Downloaded {stats['successful']} of {stats['total']} repositories\n"
+                f"Failed: {stats['failed']}\n"
+                f"Parallel threads used: {workers_used}\n\n"
                 f"Files saved to:\n{self.location_label.text()}"
             )
 
