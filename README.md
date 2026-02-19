@@ -1,4 +1,4 @@
-# Smart Repository Manager GUI <sup>v1.1.1</sup>
+# Smart Repository Manager GUI <sup>v1.1.2</sup>
 
 A powerful desktop application for managing GitHub repositories with intelligent synchronization, SSH configuration, and comprehensive visual management tools.
 
@@ -103,28 +103,50 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ## ⌨️ Keyboard Shortcuts
 
-| Category | Shortcut       | Action |
-|----------|----------------|--------|
-| **File** | `F5`           | Refresh |
-| | `Ctrl+Q`       | Exit |
-| **Sync** | `Ctrl+S`       | Synchronize All |
-| | `Ctrl+U`       | Update Needed |
-| | `Ctrl+M`       | Clone Missing |
-| | `Ctrl+Shift+R` | Sync with Repair |
-| | `Ctrl+Shift+S` | Sync Selected |
-| | `Ctrl+Shift+C` | Clone Selected |
-| | `Ctrl+Shift+U` | Update Selected |
-| **Repos** | `Ctrl+Shift+B` | Open in Browser |
-| | `Ctrl+L`       | Open Local Folder |
-| | `Ctrl+R`       | Refresh List |
-| | `Ctrl+D`       | Show Details |
-| | `Ctrl+Delete`  | Delete Local Copy |
-| **Tools** | `Ctrl+I`       | User Information |
-| | `Ctrl+T`       | Token Information |
-| | `Ctrl+Alt+S`   | SSH Configuration |
-| | `Ctrl+Shift+N` | Network Information |
-| | `Ctrl+Shift+M` | Storage Management |
-| **Help** | `F1`           | Documentation |
+### 📁 File
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+B` | Create Archive |
+| `F5` | Refresh |
+| `Ctrl+Q` | Exit |
+
+### 🔄 Synchronization
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+S` | Synchronize All |
+| `Ctrl+U` | Update Needed Only |
+| `Ctrl+M` | Clone Missing Only |
+| `Ctrl+Shift+R` | Sync with Repair |
+| `Ctrl+Alt+R` | Re-clone All Repositories |
+| `Ctrl+Shift+S` | Sync Selected |
+| `Ctrl+Shift+C` | Clone Selected |
+| `Ctrl+Shift+U` | Update Selected |
+| `Ctrl+Shift+D` | Download all repositories |
+
+### 📂 Repositories
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Shift+B` | Open in Browser |
+| `Ctrl+L` | Open Local Folder |
+| `Ctrl+D` | Show Details |
+| `Ctrl+R` | Refresh List |
+| `Ctrl+Del` | Delete Local Copy |
+
+### 🛠️ Tools
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+I` | User Information |
+| `Ctrl+T` | Token Information |
+| `Ctrl+Alt+S` | SSH Configuration |
+| `Ctrl+Shift+N` | Network Information |
+| `Ctrl+Shift+M` | Storage Management |
+
+### ❓ Help
+| Shortcut | Action |
+|----------|--------|
+| `F1` | Documentation |
+| `Ctrl+/` | Keyboard shortcuts |
+| `Ctrl+Shift+A` | About |
 
 ---
 

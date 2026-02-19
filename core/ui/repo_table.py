@@ -2,12 +2,12 @@
 from PyQt6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView,
     QProgressBar, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QComboBox, QLineEdit, QMenu, QMessageBox
+    QComboBox, QLineEdit, QMenu
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QBrush, QColor
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from core.ui.dark_theme import ModernDarkTheme
 
 
 class RepoTable(QWidget):

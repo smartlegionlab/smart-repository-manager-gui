@@ -1,6 +1,7 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 from PyQt6.QtGui import QPalette, QColor
 
+
 class ModernDarkTheme:
     PRIMARY_COLOR = "#0e65e5"
     DARK_BG = "#121212"

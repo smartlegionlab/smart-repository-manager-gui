@@ -13,7 +13,7 @@ import subprocess
 import os
 from pathlib import Path
 
-from smart_repository_manager_gui.core.storage_service import StorageService
+from core.services.storage_service import StorageService
 
 
 class StorageAnalysisThread(QThread):

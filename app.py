@@ -2,8 +2,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 
-from smart_repository_manager_gui.main_window import MainWindow
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from core.ui.main_window import MainWindow
+from core.ui.dark_theme import ModernDarkTheme
 
 
 def main():

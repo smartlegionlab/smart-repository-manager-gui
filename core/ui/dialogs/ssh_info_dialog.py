@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QFont
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.ssh_service import SSHService
 from smart_repository_manager_core.core.models.ssh_models import SSHKeyType, SSHStatus
 

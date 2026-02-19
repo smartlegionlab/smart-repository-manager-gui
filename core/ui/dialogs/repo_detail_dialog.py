@@ -9,8 +9,8 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QAction
 from smart_repository_manager_core.core.models.repository import Repository
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
-from smart_repository_manager_gui.ui.repo_download_dialog import RepoDownloadDialog
+from core.ui.dark_theme import ModernDarkTheme
+from core.ui.dialogs.repo_download_dialog import RepoDownloadDialog
 
 
 class RepoDetailDialog(QDialog):

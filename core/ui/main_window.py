@@ -20,22 +20,22 @@ from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
 
-from smart_repository_manager_gui.core.state_manager import ApplicationState
-from smart_repository_manager_gui.core.storage_service import StorageService
-from smart_repository_manager_gui.core.sync_manager import SyncManager
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
-from smart_repository_manager_gui.ui.folder_info_dialog import StorageManagementDialog
-from smart_repository_manager_gui.ui.network_info_dialog import NetworkInfoDialog
-from smart_repository_manager_gui.ui.repo_detail_dialog import RepoDetailDialog
-from smart_repository_manager_gui.ui.preloader import SmartPreloader
-from smart_repository_manager_gui.ui.repo_table import RepoTable
-from smart_repository_manager_gui.ui.ssh_info_dialog import SSHInfoDialog
-from smart_repository_manager_gui.ui.sync_dialogue import SyncDialog
-from smart_repository_manager_gui.ui.token_info_dialog import TokenInfoDialog
-from smart_repository_manager_gui.ui.user_info_dialog import UserInfoDialog
+from core.managers.state_manager import ApplicationState
+from core.services.storage_service import StorageService
+from core.managers.sync_manager import SyncManager
+from core.ui.dark_theme import ModernDarkTheme
+from core.ui.dialogs.folder_info_dialog import StorageManagementDialog
+from core.ui.dialogs.network_info_dialog import NetworkInfoDialog
+from core.ui.dialogs.repo_detail_dialog import RepoDetailDialog
+from core.ui.preloader import SmartPreloader
+from core.ui.repo_table import RepoTable
+from core.ui.dialogs.ssh_info_dialog import SSHInfoDialog
+from core.ui.dialogs.sync_dialogue import SyncDialog
+from core.ui.dialogs.token_info_dialog import TokenInfoDialog
+from core.ui.dialogs.user_info_dialog import UserInfoDialog
 
-from smart_repository_manager_gui import __version__ as ver
-from smart_repository_manager_gui.ui.repo_download_dialog import RepoDownloadDialog
+from core import __version__ as ver
+from core.ui.dialogs.repo_download_dialog import RepoDownloadDialog
 
 
 class MainWindow(QMainWindow):
@@ -103,6 +103,7 @@ class MainWindow(QMainWindow):
         sync_menu.addAction(sync_with_repair_action)
 
         reclone_all_action = QAction("&Re-clone All", self)
+        reclone_all_action.setShortcut(QKeySequence("Ctrl+Alt+R"))
         reclone_all_action.triggered.connect(self.sync_reclone_all)
         sync_menu.addAction(reclone_all_action)
 
@@ -126,6 +127,7 @@ class MainWindow(QMainWindow):
         sync_menu.addSeparator()
 
         download_all_zip_action = QAction("Download All Repositories...", self)
+        download_all_zip_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
         download_all_zip_action.triggered.connect(self.download_all_repositories_as_zip)
         sync_menu.addAction(download_all_zip_action)
 
@@ -197,12 +199,14 @@ class MainWindow(QMainWindow):
         help_menu.addAction(documentation_action)
 
         keyboard_shortcuts_action = QAction("&Keyboard Shortcuts", self)
+        keyboard_shortcuts_action.setShortcut(QKeySequence("Ctrl+/"))
         keyboard_shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
         help_menu.addAction(keyboard_shortcuts_action)
 
         help_menu.addSeparator()
 
         about_action = QAction("&About", self)
+        about_action.setShortcut(QKeySequence("Ctrl+Shift+A"))
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
 
@@ -1512,6 +1516,7 @@ class MainWindow(QMainWindow):
 
         shortcuts = [
             ("File", [
+                ("Ctrl+B", "Create Archive"),
                 ("F5", "Refresh"),
                 ("Ctrl+Q", "Exit")
             ]),
@@ -1520,16 +1525,18 @@ class MainWindow(QMainWindow):
                 ("Ctrl+U", "Update Needed Only"),
                 ("Ctrl+M", "Clone Missing Only"),
                 ("Ctrl+Shift+R", "Sync with Repair"),
+                ("Ctrl+Alt+R", "Re-clone All Repositories"),
                 ("Ctrl+Shift+S", "Sync Selected"),
                 ("Ctrl+Shift+C", "Clone Selected"),
-                ("Ctrl+Shift+U", "Update Selected")
+                ("Ctrl+Shift+U", "Update Selected"),
+                ("Ctrl+Shift+D", "Download all repositories"),
             ]),
             ("Repositories", [
                 ("Ctrl+Shift+B", "Open in Browser"),
                 ("Ctrl+L", "Open Local Folder"),
                 ("Ctrl+D", "Show Details"),
                 ("Ctrl+R", "Refresh List"),
-                ("Ctrl+Delete", "Delete Local Copy")
+                ("Ctrl+Del", "Delete Local Copy")
             ]),
             ("Tools", [
                 ("Ctrl+I", "User Information"),
@@ -1539,7 +1546,9 @@ class MainWindow(QMainWindow):
                 ("Ctrl+Shift+M", "Storage Management")
             ]),
             ("Help", [
-                ("F1", "Documentation")
+                ("F1", "Documentation"),
+                ("Ctrl+/", "Keyboard shortcuts"),
+                ("Ctrl+Shift+A", "About"),
             ])
         ]
 

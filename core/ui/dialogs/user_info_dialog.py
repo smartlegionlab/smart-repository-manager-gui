@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QPixmap, QPainter, QColor, QPainterPath
 from smart_repository_manager_core.services.github_service import GitHubService
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from core.ui.dark_theme import ModernDarkTheme
 
 
 class UserInfoDialog(QDialog):

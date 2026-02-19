@@ -9,7 +9,7 @@ from PyQt6.QtGui import QFont
 import sys
 from pathlib import Path
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
+from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.config_service import ConfigService
 from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.ssh_service import SSHService
@@ -17,7 +17,7 @@ from smart_repository_manager_core.services.network_service import NetworkServic
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
 from smart_repository_manager_core.core.models.ssh_models import SSHStatus
-from smart_repository_manager_gui import  __version__ as ver
+from core import  __version__ as ver
 
 
 class SmartPreloader(QWidget):
@@ -213,7 +213,7 @@ class SmartPreloader(QWidget):
             self._finish_checkup(False, f"Exception: {str(e)}")
 
     def _open_user_selection(self):
-        from smart_repository_manager_gui.ui.token_selection_dialog import TokenSelectionDialog
+        from core.ui.dialogs.token_selection_dialog import TokenSelectionDialog
 
         dialog = TokenSelectionDialog()
         if dialog.exec():

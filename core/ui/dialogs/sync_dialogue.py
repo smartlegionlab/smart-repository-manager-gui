@@ -10,8 +10,8 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QFont
 from smart_repository_manager_core.core.models.repository import Repository
 
-from smart_repository_manager_gui.ui.dark_theme import ModernDarkTheme
-from smart_repository_manager_gui.core.sync_manager import SyncManager
+from core.ui.dark_theme import ModernDarkTheme
+from core.managers.sync_manager import SyncManager
 
 
 class SyncWorker(QThread):
