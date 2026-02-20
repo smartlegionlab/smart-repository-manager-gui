@@ -13,10 +13,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QFont
+from smart_repository_manager_core.services.download_service import DownloadService
 
 from core.ui.dark_theme import ModernDarkTheme
-from core.services.download_service import DownloadService
-
 
 class RepoDownloadWorker(QThread):
     progress_update = pyqtSignal(int, int, str)
@@ -39,7 +38,6 @@ class RepoDownloadWorker(QThread):
         except:
             self.max_workers = 4
 
-        print(f"🚀 RepoDownloadWorker: Using {self.max_workers} parallel workers (CPU cores: {self.cpu_count})")
 
     def run(self):
         try:
@@ -52,8 +50,6 @@ class RepoDownloadWorker(QThread):
             progress_lock = threading.Lock()
 
             completed = 0
-
-            print(f"📦 Starting parallel download of {total_repos} repositories with {self.max_workers} workers")
 
             def download_single_repo(repo):
                 if not self._is_running:
