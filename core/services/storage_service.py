@@ -265,6 +265,156 @@ class StorageService:
         except Exception as e:
             return {"success": False, "error": f"Error cleaning logs: {str(e)}"}
 
+    def cleanup_downloads(self, username: str) -> Dict[str, Any]:
+        try:
+            if not username:
+                return {"success": False, "error": "Username not provided"}
+
+            structure = self.structure_service.get_user_structure(username)
+            if "downloads" not in structure:
+                return {"success": False, "error": "Downloads directory not found in structure"}
+
+            downloads_path = structure["downloads"]
+
+            if not downloads_path.exists():
+                return {"success": False, "error": "Downloads directory doesn't exist"}
+
+            deleted_count = 0
+            total_size = 0
+            deleted_files = []
+
+            for item in downloads_path.iterdir():
+                try:
+                    if item.is_file():
+                        file_size = item.stat().st_size
+                        item.unlink()
+                        deleted_count += 1
+                        total_size += file_size
+                        deleted_files.append(item.name)
+                    elif item.is_dir():
+                        dir_size = self._get_folder_size(item)
+                        shutil.rmtree(item, ignore_errors=True)
+                        deleted_count += 1
+                        total_size += dir_size
+                        deleted_files.append(item.name)
+                except Exception as e:
+                    print(f"Error deleting {item}: {e}")
+                    continue
+
+            self._clear_cache(username)
+
+            return {
+                "success": True,
+                "message": f"Cleaned {deleted_count} download items ({Helpers.format_size(total_size)})",
+                "deleted_count": deleted_count,
+                "total_size_bytes": total_size,
+                "total_size_formatted": Helpers.format_size(total_size),
+                "deleted_files": deleted_files
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"Error cleaning downloads: {str(e)}"}
+
+    def cleanup_backups(self, username: str) -> Dict[str, Any]:
+        try:
+            if not username:
+                return {"success": False, "error": "Username not provided"}
+
+            structure = self.structure_service.get_user_structure(username)
+            if "backups" not in structure:
+                return {"success": False, "error": "Backups directory not found in structure"}
+
+            backups_path = structure["backups"]
+
+            if not backups_path.exists():
+                return {"success": False, "error": "Backups directory doesn't exist"}
+
+            deleted_count = 0
+            total_size = 0
+            deleted_files = []
+
+            for item in backups_path.iterdir():
+                try:
+                    if item.is_file():
+                        file_size = item.stat().st_size
+                        item.unlink()
+                        deleted_count += 1
+                        total_size += file_size
+                        deleted_files.append(item.name)
+                    elif item.is_dir():
+                        dir_size = self._get_folder_size(item)
+                        shutil.rmtree(item, ignore_errors=True)
+                        deleted_count += 1
+                        total_size += dir_size
+                        deleted_files.append(item.name)
+                except Exception as e:
+                    print(f"Error deleting {item}: {e}")
+                    continue
+
+            self._clear_cache(username)
+
+            return {
+                "success": True,
+                "message": f"Cleaned {deleted_count} backup items ({Helpers.format_size(total_size)})",
+                "deleted_count": deleted_count,
+                "total_size_bytes": total_size,
+                "total_size_formatted": Helpers.format_size(total_size),
+                "deleted_files": deleted_files
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"Error cleaning backups: {str(e)}"}
+
+    def cleanup_temp(self, username: str) -> Dict[str, Any]:
+        try:
+            if not username:
+                return {"success": False, "error": "Username not provided"}
+
+            structure = self.structure_service.get_user_structure(username)
+            if "temp" not in structure:
+                return {"success": False, "error": "Temp directory not found in structure"}
+
+            temp_path = structure["temp"]
+
+            if not temp_path.exists():
+                return {"success": False, "error": "Temp directory doesn't exist"}
+
+            deleted_count = 0
+            total_size = 0
+            deleted_files = []
+
+            for item in temp_path.iterdir():
+                try:
+                    if item.is_file():
+                        file_size = item.stat().st_size
+                        item.unlink()
+                        deleted_count += 1
+                        total_size += file_size
+                        deleted_files.append(item.name)
+                    elif item.is_dir():
+                        dir_size = self._get_folder_size(item)
+                        shutil.rmtree(item, ignore_errors=True)
+                        deleted_count += 1
+                        total_size += dir_size
+                        deleted_files.append(item.name)
+                except Exception as e:
+                    print(f"Error deleting {item}: {e}")
+                    continue
+
+            self._clear_cache(username)
+
+            return {
+                "success": True,
+                "message": f"Cleaned {deleted_count} temp items ({Helpers.format_size(total_size)})",
+                "deleted_count": deleted_count,
+                "total_size_bytes": total_size,
+                "total_size_formatted": Helpers.format_size(total_size),
+                "deleted_files": deleted_files
+            }
+
+        except Exception as e:
+            return {"success": False, "error": f"Error cleaning temp: {str(e)}"}
+
     def get_repository_details(self, username: str, repo_name: str) -> Dict[str, Any]:
         try:
             if not username or not repo_name:

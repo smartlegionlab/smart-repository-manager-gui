@@ -86,15 +86,15 @@ class StorageAnalysisThread(QThread):
 class FolderPathLabel(QLabel):
     clicked = pyqtSignal(str)
 
-    def __init__(self, text="", path=""):
-        super().__init__(text)
+    def __init__(self, text="", path="", parent=None):
+        super().__init__(text, parent)
         self.path = path
         self.setStyleSheet("""
             QLabel {
                 color: #4d94ff;
                 text-decoration: underline;
-                padding: 2px 5px;
-                border-radius: 3px;
+                padding: 1px 3px;
+                font-size: 11px;
             }
             QLabel:hover {
                 background-color: #2a2a2a;
@@ -117,17 +117,18 @@ class StorageManagementDialog(QDialog):
         self.username = app_state.get('current_user')
         self.storage_service = StorageService()
         self.analysis_thread = None
+        self.folder_action_widgets = []
 
         self.setWindowTitle("Storage Management")
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(900, 650)
 
         self.setup_ui()
         self.load_storage_info()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(10)
 
         from PyQt6.QtWidgets import QTabWidget
         self.tab_widget = QTabWidget()
@@ -147,9 +148,11 @@ class StorageManagementDialog(QDialog):
         button_layout.addStretch()
 
         self.refresh_btn = QPushButton("🔄 Refresh")
+        self.refresh_btn.setFixedHeight(25)
         self.refresh_btn.clicked.connect(self.refresh_storage_info)
 
         self.close_btn = QPushButton("Close")
+        self.close_btn.setFixedHeight(25)
         self.close_btn.clicked.connect(self.accept)
 
         button_layout.addWidget(self.refresh_btn)
@@ -160,10 +163,11 @@ class StorageManagementDialog(QDialog):
     def create_overview_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(15)
+        layout.setSpacing(10)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
+        self.progress_bar.setFixedHeight(15)
         layout.addWidget(self.progress_bar)
 
         overview_group = QGroupBox("Storage Overview")
@@ -211,7 +215,7 @@ class StorageManagementDialog(QDialog):
         self.repos_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.repos_table.setColumnCount(6)
         self.repos_table.setHorizontalHeaderLabels([
-            "Repository", "Size", "Files", "Folders", "Git", "Last Modified"
+            "Repository", "Size", "Files", "Folders", "Git", "Modified"
         ])
         self.repos_table.setSortingEnabled(True)
         self.repos_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -222,12 +226,15 @@ class StorageManagementDialog(QDialog):
             header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
 
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(5)
 
-        self.delete_repo_btn = QPushButton("🗑️ Delete Selected")
+        self.delete_repo_btn = QPushButton("🗑️ Delete")
+        self.delete_repo_btn.setFixedHeight(22)
         self.delete_repo_btn.clicked.connect(self.delete_selected_repository)
         self.delete_repo_btn.setEnabled(False)
 
-        self.open_repo_btn = QPushButton("📂 Open Folder")
+        self.open_repo_btn = QPushButton("📂 Open")
+        self.open_repo_btn.setFixedHeight(22)
         self.open_repo_btn.clicked.connect(self.open_selected_repository)
         self.open_repo_btn.setEnabled(False)
 
@@ -245,76 +252,142 @@ class StorageManagementDialog(QDialog):
     def create_cleanup_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setSpacing(20)
+        layout.setSpacing(10)
 
-        archives_group = QGroupBox("Archives Cleanup")
+        cleanup_grid = QGridLayout()
+        cleanup_grid.setSpacing(10)
+
+        archives_group = QGroupBox("Archives")
         archives_layout = QVBoxLayout(archives_group)
+        archives_layout.setSpacing(5)
 
-        self.archives_info_label = QLabel("Checking archives...")
-        self.clean_archives_btn = QPushButton("📦 Clean Archives")
-        self.clean_archives_btn.clicked.connect(self.cleanup_archives)
+        self.archives_info_label = QLabel("Checking...")
+        self.archives_info_label.setStyleSheet("font-size: 11px;")
+        self.clean_archives_btn = QPushButton("🗑️ Clean")
+        self.clean_archives_btn.setFixedHeight(22)
+        self.clean_archives_btn.clicked.connect(lambda: self.cleanup_specific_folder("archives"))
         self.clean_archives_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ff9800;
                 color: white;
-                font-weight: bold;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #e68900;
             }
             QPushButton:disabled {
                 background-color: #808080;
-                color: #cccccc;
             }
         """)
 
         archives_layout.addWidget(self.archives_info_label)
         archives_layout.addWidget(self.clean_archives_btn)
-        layout.addWidget(archives_group)
+        cleanup_grid.addWidget(archives_group, 0, 0)
 
-        logs_group = QGroupBox("Logs Cleanup")
+        logs_group = QGroupBox("Logs")
         logs_layout = QVBoxLayout(logs_group)
+        logs_layout.setSpacing(5)
 
-        self.logs_info_label = QLabel("Checking logs...")
-        self.clean_logs_btn = QPushButton("📝 Clean Logs")
-        self.clean_logs_btn.clicked.connect(self.cleanup_logs)
+        self.logs_info_label = QLabel("Checking...")
+        self.logs_info_label.setStyleSheet("font-size: 11px;")
+        self.clean_logs_btn = QPushButton("🗑️ Clean")
+        self.clean_logs_btn.setFixedHeight(22)
+        self.clean_logs_btn.clicked.connect(lambda: self.cleanup_specific_folder("logs"))
         self.clean_logs_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2196f3;
                 color: white;
-                font-weight: bold;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #1976d2;
             }
             QPushButton:disabled {
                 background-color: #808080;
-                color: #cccccc;
             }
         """)
 
         logs_layout.addWidget(self.logs_info_label)
         logs_layout.addWidget(self.clean_logs_btn)
-        layout.addWidget(logs_group)
+        cleanup_grid.addWidget(logs_group, 0, 1)
+
+        downloads_group = QGroupBox("Downloads")
+        downloads_layout = QVBoxLayout(downloads_group)
+        downloads_layout.setSpacing(5)
+
+        self.downloads_info_label = QLabel("Checking...")
+        self.downloads_info_label.setStyleSheet("font-size: 11px;")
+        self.clean_downloads_btn = QPushButton("🗑️ Clean")
+        self.clean_downloads_btn.setFixedHeight(22)
+        self.clean_downloads_btn.clicked.connect(lambda: self.cleanup_specific_folder("downloads"))
+        self.clean_downloads_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4caf50;
+                color: white;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:disabled {
+                background-color: #808080;
+            }
+        """)
+
+        downloads_layout.addWidget(self.downloads_info_label)
+        downloads_layout.addWidget(self.clean_downloads_btn)
+        cleanup_grid.addWidget(downloads_group, 1, 0)
+
+        temp_group = QGroupBox("Temp Files")
+        temp_layout = QVBoxLayout(temp_group)
+        temp_layout.setSpacing(5)
+
+        self.temp_info_label = QLabel("Checking...")
+        self.temp_info_label.setStyleSheet("font-size: 11px;")
+        self.clean_temp_btn = QPushButton("🗑️ Clean")
+        self.clean_temp_btn.setFixedHeight(22)
+        self.clean_temp_btn.clicked.connect(lambda: self.cleanup_specific_folder("temp"))
+        self.clean_temp_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #6c757d;
+                color: white;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #5a6268;
+            }
+            QPushButton:disabled {
+                background-color: #808080;
+            }
+        """)
+
+        temp_layout.addWidget(self.temp_info_label)
+        temp_layout.addWidget(self.clean_temp_btn)
+        cleanup_grid.addWidget(temp_group, 1, 1)
+
+        layout.addLayout(cleanup_grid)
 
         delete_group = QGroupBox("Repository Management")
         delete_layout = QVBoxLayout(delete_group)
+        delete_layout.setSpacing(5)
 
         self.delete_all_info_label = QLabel("Warning: This will delete ALL local repositories")
+        self.delete_all_info_label.setStyleSheet("font-size: 11px; color: #dc3545;")
         self.delete_all_btn = QPushButton("⚠️ Delete All Repositories")
+        self.delete_all_btn.setFixedHeight(25)
         self.delete_all_btn.clicked.connect(self.delete_all_repositories)
         self.delete_all_btn.setStyleSheet("""
             QPushButton {
                 background-color: #dc3545;
                 color: white;
                 font-weight: bold;
+                font-size: 11px;
             }
             QPushButton:hover {
                 background-color: #c82333;
             }
             QPushButton:disabled {
                 background-color: #808080;
-                color: #cccccc;
             }
         """)
 
@@ -323,7 +396,7 @@ class StorageManagementDialog(QDialog):
         layout.addWidget(delete_group)
 
         self.last_cleanup_label = QLabel("")
-        self.last_cleanup_label.setStyleSheet("color: #6c757d; font-size: 11px;")
+        self.last_cleanup_label.setStyleSheet("color: #6c757d; font-size: 10px;")
         layout.addWidget(self.last_cleanup_label)
 
         layout.addStretch()
@@ -382,7 +455,7 @@ class StorageManagementDialog(QDialog):
 
         storage_path = storage_info.get("path", "N/A")
         path_label = QLabel(storage_path)
-        path_label.setStyleSheet("color: #4d94ff; text-decoration: underline; padding: 2px 5px;")
+        path_label.setStyleSheet("color: #4d94ff; text-decoration: underline; font-size: 11px;")
         path_label.setCursor(Qt.CursorShape.PointingHandCursor)
         path_label.setToolTip(f"Click to open: {storage_path}")
         path_label.mousePressEvent = lambda e, p=storage_path: self.open_folder(
@@ -395,13 +468,15 @@ class StorageManagementDialog(QDialog):
         self.add_info_row(self.overview_layout, row, "Repositories:", str(storage_info.get("repo_count", 0)))
         row += 1
         self.add_info_row(self.overview_layout, row, "Total Size:",
-                          f"{storage_info.get('total_size_mb', 0):.2f} MB")
+                          f"{storage_info.get('total_size_mb', 0):.1f} MB")
 
         if "folders" in storage_info:
             folder_types = [
                 ("repositories", "📚 Repositories"),
                 ("archives", "📦 Archives"),
+                ("downloads", "📥 Downloads"),
                 ("logs", "📝 Logs"),
+                ("temp", "🗑️ Temp"),
             ]
 
             row = 0
@@ -413,17 +488,17 @@ class StorageManagementDialog(QDialog):
                     item_count = folder_info.get("item_count", 0)
 
                     name_label = QLabel(display_name)
-                    name_label.setStyleSheet("font-weight: bold;")
+                    name_label.setStyleSheet("font-weight: bold; font-size: 11px;")
 
                     if folder_path and Path(folder_path).exists():
-                        path_label = FolderPathLabel(folder_path, folder_path)
+                        path_label = FolderPathLabel(folder_path, folder_path, self)
                         path_label.clicked.connect(self.open_folder)
                     else:
-                        path_label = QLabel("Path not available")
-                        path_label.setStyleSheet("color: #6c757d;")
+                        path_label = QLabel("Not found")
+                        path_label.setStyleSheet("color: #6c757d; font-size: 11px;")
 
                     stats_label = QLabel(f"{size_mb:.1f} MB, {item_count} items")
-                    stats_label.setStyleSheet("color: #6c757d; font-size: 11px;")
+                    stats_label.setStyleSheet("color: #6c757d; font-size: 10px;")
 
                     self.folders_layout.addWidget(name_label, row, 0)
                     self.folders_layout.addWidget(path_label, row, 1)
@@ -449,6 +524,7 @@ class StorageManagementDialog(QDialog):
 
             usage_percent = disk_info.get('used_percent', 0)
             usage_bar = QProgressBar()
+            usage_bar.setFixedHeight(15)
             usage_bar.setValue(int(usage_percent))
             usage_bar.setFormat(f"{usage_percent:.1f}%")
             usage_bar.setStyleSheet("""
@@ -456,6 +532,7 @@ class StorageManagementDialog(QDialog):
                     border: 1px solid #2d2d2d;
                     border-radius: 3px;
                     text-align: center;
+                    font-size: 10px;
                 }
                 QProgressBar::chunk {
                     background-color: #0e65e5;
@@ -497,48 +574,38 @@ class StorageManagementDialog(QDialog):
         self.repos_table.sortItems(1, Qt.SortOrder.DescendingOrder)
 
     def update_cleanup_tab(self, storage_info: dict):
-        if "folders" in storage_info and "archives" in storage_info["folders"]:
-            archives_info = storage_info["folders"]["archives"]
-            size_mb = archives_info.get("size_mb", 0)
-            item_count = archives_info.get("item_count", 0)
+        folder_configs = [
+            ("archives", self.archives_info_label, self.clean_archives_btn),
+            ("logs", self.logs_info_label, self.clean_logs_btn),
+            ("downloads", self.downloads_info_label, self.clean_downloads_btn),
+            ("temp", self.temp_info_label, self.clean_temp_btn)
+        ]
 
-            if item_count > 0:
-                self.archives_info_label.setText(
-                    f"Found {item_count} archive files ({size_mb:.1f} MB)"
-                )
-                self.clean_archives_btn.setEnabled(True)
+        for folder_key, info_label, clean_btn in folder_configs:
+            if "folders" in storage_info and folder_key in storage_info["folders"]:
+                folder_info = storage_info["folders"][folder_key]
+                size_mb = folder_info.get("size_mb", 0)
+                item_count = folder_info.get("item_count", 0)
+
+                if item_count > 0:
+                    if size_mb < 0.01:
+                        info_label.setText(f"{item_count} items")
+                    else:
+                        info_label.setText(f"{size_mb:.1f} MB, {item_count} items")
+                    clean_btn.setEnabled(True)
+                else:
+                    info_label.setText("Empty")
+                    clean_btn.setEnabled(False)
             else:
-                self.archives_info_label.setText("No archives found")
-                self.clean_archives_btn.setEnabled(False)
-        else:
-            self.archives_info_label.setText("Archives directory not found")
-            self.clean_archives_btn.setEnabled(False)
-
-        if "folders" in storage_info and "logs" in storage_info["folders"]:
-            logs_info = storage_info["folders"]["logs"]
-            size_mb = logs_info.get("size_mb", 0)
-            item_count = logs_info.get("item_count", 0)
-
-            if item_count > 0:
-                self.logs_info_label.setText(
-                    f"Found {item_count} log files ({size_mb:.1f} MB)"
-                )
-                self.clean_logs_btn.setEnabled(True)
-            else:
-                self.logs_info_label.setText("No logs found")
-                self.clean_logs_btn.setEnabled(False)
-        else:
-            self.logs_info_label.setText("Logs directory not found")
-            self.clean_logs_btn.setEnabled(False)
+                info_label.setText("Not found")
+                clean_btn.setEnabled(False)
 
         repo_count = storage_info.get("repo_count", 0)
         if repo_count > 0:
-            self.delete_all_info_label.setText(
-                f"⚠️ Warning: This will delete ALL {repo_count} local repositories"
-            )
+            self.delete_all_info_label.setText(f"⚠️ {repo_count} repositories will be deleted")
             self.delete_all_btn.setEnabled(True)
         else:
-            self.delete_all_info_label.setText("No local repositories found")
+            self.delete_all_info_label.setText("No repositories found")
             self.delete_all_btn.setEnabled(False)
 
     def refresh_storage_info(self):
@@ -555,22 +622,24 @@ class StorageManagementDialog(QDialog):
         if not self.username:
             return
 
-        confirm_text = QMessageBox.critical(
-            self, "DANGER - Delete All Repositories",
-            f"⚠️ ⚠️ ⚠️\n\n"
-            f"This will PERMANENTLY delete ALL local repositories for user @{self.username}.\n\n"
-            f"This action cannot be undone!\n\n"
-            f"Type 'DELETE-ALL' to confirm:",
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle("Delete All Repositories")
+        msg_box.setText(
+            f"⚠️ This will PERMANENTLY delete ALL local repositories for @{self.username}.\n\n"
+            f"This action cannot be undone!"
+        )
+        msg_box.setStandardButtons(
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
         )
 
-        if confirm_text != QMessageBox.StandardButton.Ok:
+        if msg_box.exec() != QMessageBox.StandardButton.Ok:
             return
 
         from PyQt6.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(
-            self, "Final Confirmation",
-            "Type 'DELETE-ALL' to confirm deletion:"
+            self, "Confirmation",
+            "Type 'DELETE-ALL' to confirm:"
         )
 
         if not ok or text != 'DELETE-ALL':
@@ -600,7 +669,7 @@ class StorageManagementDialog(QDialog):
 
         reply = QMessageBox.question(
             self, "Confirm Deletion",
-            f"Are you sure you want to delete repository '{repo_name}'?",
+            f"Delete repository '{repo_name}'?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
@@ -610,7 +679,7 @@ class StorageManagementDialog(QDialog):
         result = self.storage_service.delete_repository(self.username, repo_name)
 
         if result.get("success"):
-            QMessageBox.information(self, "Success", result.get("message", "Repository deleted"))
+            QMessageBox.information(self, "Success", "Repository deleted")
             self.refresh_storage_info()
 
             current_local = self.app_state.get('local_repositories_count', 0)
@@ -663,10 +732,10 @@ class StorageManagementDialog(QDialog):
 
     def add_info_row(self, layout, row, label_text, value_text):
         label = QLabel(label_text)
-        label.setStyleSheet("color: #b0b0b0;")
+        label.setStyleSheet("color: #b0b0b0; font-size: 11px;")
 
         value = QLabel(value_text)
-        value.setStyleSheet("color: #ffffff; font-weight: 500;")
+        value.setStyleSheet("color: #ffffff; font-weight: 500; font-size: 11px;")
 
         layout.addWidget(label, row, 0)
         layout.addWidget(value, row, 1)
@@ -677,59 +746,57 @@ class StorageManagementDialog(QDialog):
             if item.widget():
                 item.widget().deleteLater()
 
-    def cleanup_archives(self):
+    def cleanup_specific_folder(self, folder_type: str):
         if not self.username:
             return
 
+        folder_names = {
+            "archives": "Archives",
+            "logs": "Logs",
+            "downloads": "Downloads",
+            "temp": "Temp Files"
+        }
+
+        display_name = folder_names.get(folder_type, folder_type.capitalize())
+
         reply = QMessageBox.question(
             self, "Confirm Cleanup",
-            f"Are you sure you want to clean archives?\n\n"
-            f"This action cannot be undone!",
+            f"Clean {display_name}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        result = self.storage_service.cleanup_archives(self.username)
+        result = None
 
-        if result.get("success"):
+        if folder_type == "archives":
+            result = self.storage_service.cleanup_archives(self.username)
+        elif folder_type == "logs":
+            result = self.storage_service.cleanup_logs(self.username)
+        elif folder_type == "downloads":
+            if hasattr(self.storage_service, 'cleanup_downloads'):
+                result = self.storage_service.cleanup_downloads(self.username)
+            else:
+                result = {"success": False, "error": "Not implemented"}
+        elif folder_type == "temp":
+            if hasattr(self.storage_service, 'cleanup_temp'):
+                result = self.storage_service.cleanup_temp(self.username)
+            else:
+                result = {"success": False, "error": "Not implemented"}
+
+        if result and result.get("success"):
             QMessageBox.information(
                 self, "Success",
-                f"Cleaned {result.get('deleted_count', 0)} archive items\n"
+                f"Cleaned {display_name}\n"
+                f"Removed: {result.get('deleted_count', 0)} items\n"
                 f"Freed: {result.get('total_size_formatted', '0 B')}"
             )
             self.last_cleanup_label.setText(
-                f"Last cleanup: Archives - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                f"Last: {display_name} - {datetime.now().strftime('%H:%M')}"
             )
             self.refresh_storage_info()
-        else:
-            QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))
-
-    def cleanup_logs(self):
-        reply = QMessageBox.question(
-            self, "Confirm Cleanup",
-            f"Are you sure you want to clean logs?\n\n"
-            f"This action cannot be undone!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        result = self.storage_service.cleanup_logs(self.username)
-
-        if result.get("success"):
-            QMessageBox.information(
-                self, "Success",
-                f"Cleaned {result.get('deleted_count', 0)} log items\n"
-                f"Freed: {result.get('total_size_formatted', '0 B')}"
-            )
-            self.last_cleanup_label.setText(
-                f"Last cleanup: Logs - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            )
-            self.refresh_storage_info()
-        else:
+        elif result:
             QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))
 
     def closeEvent(self, event):
