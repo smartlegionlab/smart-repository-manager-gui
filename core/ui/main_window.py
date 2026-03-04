@@ -2,7 +2,6 @@
 import os
 import shutil
 import subprocess
-import sys
 import time
 import traceback
 import webbrowser
@@ -52,6 +51,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.app_state = ApplicationState()
+
+        self.app_state.state_changed.connect(self.on_state_changed)
+
         self.setWindowTitle(f"Smart Repository Manager {ver}")
         self._create_menu_bar()
         self._setup_ui()
@@ -2226,6 +2228,11 @@ class MainWindow(QMainWindow):
         summary += f"  • Average per repo: {self.format_duration(avg_time)}"
 
         QMessageBox.information(self, "Sync Summary", summary)
+
+    def on_state_changed(self, state: dict):
+        self.update_token_info_panel()
+        self.update_info_panel()
+        self.update_stats()
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
