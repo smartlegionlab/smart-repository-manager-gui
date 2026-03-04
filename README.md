@@ -1,4 +1,4 @@
-# Smart Repository Manager GUI <sup>v1.1.3</sup>
+# Smart Repository Manager GUI <sup>v1.1.4</sup>
 
 A powerful desktop application for managing GitHub repositories with intelligent synchronization, SSH configuration, and comprehensive visual management tools.
 
