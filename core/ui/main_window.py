@@ -11,8 +11,18 @@ from pathlib import Path
 from typing import Dict, Any
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QProgressBar, QMessageBox, QDialog, QMenu, QScrollArea, QApplication
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QFrame,
+    QProgressBar,
+    QMessageBox,
+    QDialog,
+    QMenu,
+    QScrollArea,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QAction, QKeySequence
@@ -30,7 +40,7 @@ from core.ui.dialogs.repo_detail_dialog import RepoDetailDialog
 from core.ui.preloader import SmartPreloader
 from core.ui.repo_table import RepoTable
 from core.ui.dialogs.ssh_info_dialog import SSHInfoDialog
-from core.ui.dialogs.sync_dialogue import SyncDialog
+from core.ui.dialogs.sync_dialog import SyncDialog
 from core.ui.dialogs.token_info_dialog import TokenInfoDialog
 from core.ui.dialogs.user_info_dialog import UserInfoDialog
 
@@ -54,12 +64,6 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
-
-        switch_user_action = QAction("&Switch User...", self)
-        switch_user_action.triggered.connect(self._switch_user)
-        file_menu.addAction(switch_user_action)
-
-        file_menu.addSeparator()
 
         create_archive_action = QAction("Create &Archive...", self)
         create_archive_action.setShortcut(QKeySequence("Ctrl+B"))
@@ -2222,51 +2226,6 @@ class MainWindow(QMainWindow):
         summary += f"  • Average per repo: {self.format_duration(avg_time)}"
 
         QMessageBox.information(self, "Sync Summary", summary)
-
-    def _switch_user(self):
-        if hasattr(self, 'repo_table') and self.repo_table.is_loading:
-            reply = QMessageBox.warning(
-                self,
-                "Operations in Progress",
-                "Repository operations are still in progress.\n\n"
-                "Switching user will cancel these operations.\n\n"
-                "Continue anyway?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
-            )
-
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-        reply = QMessageBox.question(
-            self,
-            "Switch User",
-            "This will restart the application to switch to a different GitHub account.\n\n"
-            "All unsaved data will be preserved in the configuration.\n\n"
-            "Continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Restarting...")
-        msg.setText("Switching user. Please wait...")
-        msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
-        msg.show()
-
-        QApplication.processEvents()
-
-        QTimer.singleShot(500, lambda: self._perform_restart(msg))
-
-    def _perform_restart(self, msg_box=None):
-        if msg_box:
-            msg_box.close()
-            msg_box.deleteLater()
-
-        os.execv(sys.executable, [sys.executable] + sys.argv)
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
