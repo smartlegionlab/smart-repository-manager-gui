@@ -25,13 +25,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QAction, QKeySequence
-from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
-from smart_repository_manager_core.services.sync_service import SyncService
 
 from core.managers.state_manager import ApplicationState
+from core.services.github_service import GitHubService
 from core.services.storage_service import StorageService
 from core.managers.sync_manager import SyncManager
+from core.services.sync_service import SyncService
 from core.ui.dark_theme import ModernDarkTheme
 from core.ui.dialogs.folder_info_dialog import StorageManagementDialog
 from core.ui.dialogs.network_info_dialog import NetworkInfoDialog

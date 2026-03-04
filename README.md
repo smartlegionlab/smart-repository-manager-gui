@@ -1,6 +1,6 @@
 # Smart Repository Manager GUI <sup>v1.1.4</sup>
 
-A powerful desktop application for managing GitHub repositories with intelligent synchronization, SSH configuration, and comprehensive visual management tools.
+A powerful desktop application for managing GitHub repositories with intelligent synchronization, and comprehensive visual management tools.
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/smartlegionlab/smart-repository-manager-gui)](https://github.com/smartlegionlab/smart-repository-manager-gui/)
 ![GitHub top language](https://img.shields.io/github/languages/top/smartlegionlab/smart-repository-manager-gui)
@@ -28,12 +28,11 @@ Every session begins with an **8-step mandatory system checkup**:
 
 1. **Directory Structure** - Creates and verifies workspace organization
 2. **Internet Connection** - Validates network connectivity
-3. **SSH Configuration** - Checks and validates SSH setup
-4. **User Management** - Select or add GitHub account
-5. **User Data** - Fetches GitHub profile information
-6. **Repository Loading** - Retrieves complete repository list
-7. **Local Copy Check** - Scans for existing local repositories
-8. **Update Detection** - Identifies repositories needing updates
+3. **User Management** - Select or add GitHub account
+4. **User Data** - Fetches GitHub profile information
+5. **Repository Loading** - Retrieves complete repository list
+6. **Local Copy Check** - Scans for existing local repositories
+7. **Update Detection** - Identifies repositories needing updates
 
 ---
 
@@ -78,26 +77,12 @@ Complete parallel download - download all repositories as ZIP archives.
 | **📚 Repositories** | Total count, local copies, pending updates |
 | **👤 User** | Display name, public repos, followers count |
 | **🌐 Network** | Connection status, external IP, GitHub accessibility |
-| **🔐 SSH** | Configuration status, keys count, GitHub authentication |
 
 ### Detail Dialogs
 - **User Information** - Complete GitHub profile with avatar
 - **Token Information** - Token scopes, creation date, rate limits
-- **SSH Configuration** - Key management, testing, troubleshooting
 - **Network Information** - DNS, server responses, connection quality
 - **Storage Management** - Disk usage, cleanup tools, repository details
-
----
-
-## 🔑 SSH Management
-
-### Key Operations
-- **Generate Keys**: Support for ED25519 (recommended), RSA 4096, ECDSA, DSA
-- **View Public Keys**: Display and copy to clipboard
-- **Test Connection**: Verify SSH connectivity to GitHub
-- **Fix Permissions**: Automatic repair of SSH file permissions
-- **Add to known_hosts**: Configure GitHub host key
-- **Create SSH Config**: Generate proper SSH configuration
 
 ---
 
@@ -137,7 +122,6 @@ Complete parallel download - download all repositories as ZIP archives.
 |----------|--------|
 | `Ctrl+I` | User Information |
 | `Ctrl+T` | Token Information |
-| `Ctrl+Alt+S` | SSH Configuration |
 | `Ctrl+Shift+N` | Network Information |
 | `Ctrl+Shift+M` | Storage Management |
 
@@ -165,29 +149,8 @@ Complete parallel download - download all repositories as ZIP archives.
 ### Prerequisites
 - Python 3.8+
 - Git installed and configured
-- An initialized SSH key with a GitHub account.
 - GitHub Personal Access Token (with `repo` scope)
 - PyQt6
-
-### Setup SSH 
-
-Before using the application, you need to initialize your SSH key:
-
-```bash
-# Generate SSH key
-ssh-keygen -t ed25519 -C "your_email@example.com"
-
-# Add to ssh-agent
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-
-# Add to GitHub account
-cat ~/.ssh/id_ed25519.pub  # Copy this output
-# Paste at https://github.com/settings/keys
-
-# Verify connection
-ssh -T git@github.com
-```
 
 ### Generate GitHub Token
 1. Visit [GitHub Tokens](https://github.com/settings/tokens/new)
@@ -245,7 +208,6 @@ python app.py
 
 ## 🔒 Security
 
-- **SSH Keys**: Proper file permissions enforced automatically
 - **Local-Only**: All operations performed locally with GitHub API
 - **No Telemetry**: No data is sent to external servers
 - **No Account Linking**: Your GitHub account is not linked to any external service
@@ -279,12 +241,10 @@ A comprehensive command-line tool for users who prefer terminal-based workflows.
 2. **REPOSITORY DAMAGE**
    - Force push conflicts or unintended overwrites
    - Broken Git references or detached HEAD states
-   - Corrupted SSH keys or invalid configurations
    - Failed merge operations or unresolved conflicts
 
 3. **SECURITY INCIDENTS**
    - Exposure of GitHub Personal Access Tokens
-   - Compromise of SSH private keys
    - Unauthorized repository access
    - Credential theft or misuse
 
@@ -303,7 +263,6 @@ A comprehensive command-line tool for users who prefer terminal-based workflows.
 **YOU ASSUME FULL RESPONSIBILITY FOR:**
 
 - **Regular backups** of all repositories and configuration files
-- **Secure storage** of authentication tokens and SSH keys
 - **Verification** of all operations before execution
 - **Testing** in non-production environments first
 - **Compliance** with GitHub Terms of Service

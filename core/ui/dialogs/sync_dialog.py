@@ -56,9 +56,10 @@ class SyncWorker(QThread):
             if not self._is_running:
                 break
 
-            if not hasattr(repo, 'ssh_url') or not repo.ssh_url:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+            if not clone_url:
                 stats["skipped"] += 1
-                self.repo_progress.emit(repo.name, "skipped", "No SSH URL")
+                self.repo_progress.emit(repo.name, "skipped", "No clone URL")
                 continue
 
             self.repo_progress.emit(repo.name, "start", f"Processing {i}/{total}")
@@ -312,6 +313,7 @@ class SyncDialog(QDialog):
         self._add_log_entry(f"🚀 Starting {self.operation} for {self.total_repos} repositories...", "#4dabf7")
         self._add_log_entry(f"👤 User: @{self.username}", "#4dabf7")
         self._add_log_entry(f"📁 Operation: {self.operation}", "#4dabf7")
+        self._add_log_entry(f"🔑 Using token authentication", "#4dabf7")
         self._add_log_entry("", "")
 
         self.worker = SyncWorker(self.sync_manager, self.repositories, self.operation)
