@@ -38,7 +38,6 @@ from core.ui.dialogs.network_info_dialog import NetworkInfoDialog
 from core.ui.dialogs.repo_detail_dialog import RepoDetailDialog
 from core.ui.preloader import SmartPreloader
 from core.ui.repo_table import RepoTable
-from core.ui.dialogs.ssh_info_dialog import SSHInfoDialog
 from core.ui.dialogs.sync_dialog import SyncDialog
 from core.ui.dialogs.token_info_dialog import TokenInfoDialog
 from core.ui.dialogs.user_info_dialog import UserInfoDialog
@@ -180,11 +179,6 @@ class MainWindow(QMainWindow):
         token_info_action.triggered.connect(self.show_token_info)
         tools_menu.addAction(token_info_action)
 
-        ssh_info_action = QAction("&SSH Configuration", self)
-        ssh_info_action.setShortcut(QKeySequence("Ctrl+Alt+S"))
-        ssh_info_action.triggered.connect(self.show_ssh_info)
-        tools_menu.addAction(ssh_info_action)
-
         network_info_action = QAction("&Network Information", self)
         network_info_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         network_info_action.triggered.connect(self.show_network_info)
@@ -272,43 +266,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Error updating token info panel: {e}")
 
-    def update_ssh_info_panel(self):
-        try:
-            ssh_status = self.app_state.get('ssh_status', 'unknown')
-            ssh_keys_found = len([k for k in self.app_state.get('checkup_results', [])
-                                  if 'ssh_keys_found' in (k.get('data') or {})])
-
-            if ssh_status == 'valid':
-                status_text = "✅ Valid"
-            elif ssh_status == 'partial':
-                status_text = "⚠️ Partial"
-            elif ssh_status == 'invalid':
-                status_text = "❌ Invalid"
-            else:
-                status_text = "⏳ Checking..."
-
-            github_auth_working = self.app_state.get('ssh_can_clone', False) or \
-                                  self.app_state.get('ssh_can_pull', False)
-
-            github_status = "✅ OK" if github_auth_working else "❌ Failed"
-
-            ssh_lines = [
-                f"Status: {status_text}",
-                f"Keys: {ssh_keys_found if ssh_keys_found > 0 else '?'}",
-                f"GitHub: {github_status}"
-            ]
-
-            for i, line in enumerate(ssh_lines):
-                if i < len(self.ssh_stats_widget.line_labels):
-                    self.ssh_stats_widget.line_labels[i].setText(line)
-
-        except Exception as e:
-            print(f"Error updating SSH info panel: {e}")
-            ssh_lines = ["Status: Error", "Keys: ?", "GitHub: ?"]
-            for i, line in enumerate(ssh_lines):
-                if i < len(self.ssh_stats_widget.line_labels):
-                    self.ssh_stats_widget.line_labels[i].setText(line)
-
     def update_network_info_panel(self):
         try:
             network_status = self.app_state.get('network_status', 'unknown')
@@ -382,17 +339,10 @@ class MainWindow(QMainWindow):
             "GitHub: ?"
         ])
 
-        self.ssh_stats_widget = self._create_stat_item("🔐", "SSH", [
-            "Status: Checking",
-            "Keys: ?",
-            "GitHub: ?"
-        ])
-
         self.info_layout.addWidget(self.token_stats_widget, 1)
         self.info_layout.addWidget(self.repos_stats_widget, 1)
         self.info_layout.addWidget(self.user_stats_widget, 1)
         self.info_layout.addWidget(self.network_stats_widget, 1)
-        self.info_layout.addWidget(self.ssh_stats_widget, 1)
 
         parent_layout.addWidget(self.info_widget)
 
@@ -642,22 +592,6 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-        ssh_info_btn = QPushButton("🔐 SSH")
-        ssh_info_btn.setMinimumWidth(80)
-        ssh_info_btn.clicked.connect(self.show_ssh_info)
-        ssh_info_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2a2a2a;
-                color: white;
-                font-weight: 500;
-                border: 1px solid #3a3a3a;
-            }
-            QPushButton:hover {
-                background-color: #333333;
-                border-color: #4a4a4a;
-            }
-        """)
-
         token_info_btn = QPushButton("🔑 Token")
         token_info_btn.setMinimumWidth(80)
         token_info_btn.clicked.connect(self.show_token_info)
@@ -680,7 +614,6 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.sync_actions_btn)
         button_layout.addWidget(folder_info_btn)
         button_layout.addWidget(network_info_btn)
-        button_layout.addWidget(ssh_info_btn)
         button_layout.addWidget(token_info_btn)
         button_layout.addStretch()
         button_layout.addWidget(exit_btn)
@@ -763,7 +696,6 @@ class MainWindow(QMainWindow):
         try:
             self.update_token_info_panel()
             self.update_network_info_panel()
-            self.update_ssh_info_panel()
 
             total_repos = self.get_total_repos_count()
             local_repos = self.get_local_repos_count()
@@ -1353,13 +1285,13 @@ class MainWindow(QMainWindow):
             if missing_count == 0:
                 return "All repositories are already cloned locally!"
             else:
-                return "No repositories to clone (check SSH configuration)."
+                return "No repositories to clone."
 
         elif operation == "sync_all":
             if len(repositories) == 0:
                 return "No repositories available."
             else:
-                return "No repositories to sync (check SSH configuration)."
+                return "No repositories to sync."
 
         else:
             return "No repositories available for this operation."
@@ -1411,10 +1343,6 @@ class MainWindow(QMainWindow):
 
     def show_token_info(self):
         dialog = TokenInfoDialog(self.app_state, self)
-        dialog.exec()
-
-    def show_ssh_info(self):
-        dialog = SSHInfoDialog(self.app_state, self)
         dialog.exec()
 
     def show_folder_info(self):
@@ -1547,7 +1475,6 @@ class MainWindow(QMainWindow):
             ("Tools", [
                 ("Ctrl+I", "User Information"),
                 ("Ctrl+T", "Token Information"),
-                ("Ctrl+Alt+S", "SSH Configuration"),
                 ("Ctrl+Shift+N", "Network Information"),
                 ("Ctrl+Shift+M", "Storage Management")
             ]),
@@ -2140,7 +2067,6 @@ class MainWindow(QMainWindow):
         <ul>
             <li>Multi-user GitHub account management</li>
             <li>Smart repository synchronization</li>
-            <li>SSH key management</li>
             <li>Storage management and cleanup</li>
             <li>Network diagnostics</li>
             <li>Batch operations</li>

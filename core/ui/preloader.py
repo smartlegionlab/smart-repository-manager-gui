@@ -12,11 +12,9 @@ from pathlib import Path
 from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.config_service import ConfigService
 from smart_repository_manager_core.services.github_service import GitHubService
-from smart_repository_manager_core.services.ssh_service import SSHService
 from smart_repository_manager_core.services.network_service import NetworkService
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
-from smart_repository_manager_core.core.models.ssh_models import SSHStatus
 from core import  __version__ as ver
 
 
@@ -27,7 +25,6 @@ class SmartPreloader(QWidget):
         super().__init__()
         self.app_state = app_state
         self.config_service = ConfigService(self.app_state.config_path)
-        self.ssh_service = SSHService()
         self.network_service = NetworkService()
         self.structure_service = StructureService(Path.home() / "smart_repository_manager")
         self.sync_service = SyncService()
@@ -36,7 +33,6 @@ class SmartPreloader(QWidget):
         self.checkup_steps = [
             ("Checking directory structure...", self.check_structure),
             ("Checking internet connection...", self.check_internet),
-            ("Checking SSH configuration...", self.check_ssh),
             ("Managing GitHub users...", self.manage_users),
             ("Getting GitHub user data...", self.get_user_data),
             ("Loading repositories...", self.get_repositories),
@@ -335,53 +331,6 @@ class SmartPreloader(QWidget):
             self.app_state.update(network_status='error', github_access=False)
             return False
 
-    def check_ssh(self) -> bool:
-        try:
-            validation = self.ssh_service.validate_ssh_configuration()
-
-            data = {
-                "status": validation.status.value,
-                "ssh_keys_found": len(validation.ssh_config.keys),
-                "github_auth_working": validation.github_authentication_working,
-                "can_clone": validation.can_clone_with_ssh,
-                "can_pull": validation.can_pull_with_ssh
-            }
-
-            self.app_state.set_multiple(
-                ssh_status=validation.status.value,
-                ssh_can_clone=validation.can_clone_with_ssh,
-                ssh_can_pull=validation.can_pull_with_ssh
-            )
-
-            if validation.ssh_config.keys:
-                key_info = []
-                for key in validation.ssh_config.keys:
-                    status = "✅" if key.is_github_authenticated else "⚠️"
-                    key_info.append(f"{status} {key.type.value}")
-                self._add_log_entry(f"Found {len(key_info)} SSH keys", "#4dabf7")
-
-            status_color = "#4caf50" if validation.status == SSHStatus.VALID else "#ff9800"
-            self._add_log_entry(f"SSH Status: {validation.status.value}", status_color)
-
-            if validation.ssh_config.keys:
-                test_success, test_msg, test_time = self.ssh_service.test_connection("github.com", "git")
-                if test_success:
-                    self._add_log_entry(f"✅ SSH connection to GitHub: {test_msg}", "#4caf50")
-                else:
-                    self._add_log_entry(f"⚠️ SSH test failed: {test_msg}", "#ff9800")
-
-            self.app_state.log_result(
-                validation.status in [SSHStatus.VALID, SSHStatus.PARTIAL],
-                f"SSH configuration check",
-                data
-            )
-
-            return validation.status in [SSHStatus.VALID, SSHStatus.PARTIAL]
-
-        except Exception as e:
-            self._add_log_entry(f"❌ SSH error: {str(e)}", "#ff4757")
-            return False
-
     def manage_users(self) -> bool:
         return True
 
@@ -622,8 +571,6 @@ class SmartPreloader(QWidget):
             needs_update_count = 0
 
             for repo in repositories:
-                if not repo.ssh_url:
-                    continue
 
                 repo_path = repos_path / repo.name
 
