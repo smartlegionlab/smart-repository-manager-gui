@@ -4,21 +4,22 @@ import subprocess
 from typing import Dict, Any, List, Tuple, Optional
 
 from smart_repository_manager_core.services.structure_service import StructureService
-from smart_repository_manager_core.services.sync_service import SyncService
 from smart_repository_manager_core.core.models.repository import Repository
+from smart_repository_manager_core.services.sync_service import SyncService
 
 
 class SyncManager:
     def __init__(self, app_state):
         self.app_state = app_state
         self.structure_service = StructureService()
-        self.sync_service = SyncService()
+        self.sync_service = None
         self.current_username: Optional[str] = None
         self.current_token: Optional[str] = None
 
     def set_user(self, username: str, token: str):
         self.current_username = username
         self.current_token = token
+        self.sync_service = SyncService(token=token)
 
     def get_sync_stats(self) -> Dict[str, Any]:
         if not self.current_username:
@@ -39,7 +40,14 @@ class SyncManager:
                 if repo_path.exists() and (repo_path / '.git').exists():
                     repo.local_exists = True
                     local_count += 1
-                    repo.need_update = False
+
+                    if hasattr(repo, 'pushed_at') and repo.pushed_at:
+                        from smart_repository_manager_core.core.git_status import GitStatusChecker
+                        if GitStatusChecker.needs_update(repo_path, repo.pushed_at):
+                            repo.need_update = True
+                            needs_update_count += 1
+                        else:
+                            repo.need_update = False
                 else:
                     repo.local_exists = False
                     repo.need_update = True
@@ -65,6 +73,13 @@ class SyncManager:
             return False, "User object creation failed", 0.0
 
         try:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+
+            if not clone_url:
+                return False, "No clone URL available", 0.0
+
+            if not repo.clone_url:
+                repo.clone_url = clone_url
 
             if operation == "clone" or not repo.local_exists:
                 success, message, duration = self.sync_service.sync_single_repository(
@@ -108,7 +123,8 @@ class SyncManager:
         }
 
         for i, repo in enumerate(repos, 1):
-            if not hasattr(repo, 'ssh_url') or not repo.ssh_url:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+            if not clone_url:
                 stats["skipped"] += 1
                 continue
 
@@ -161,7 +177,8 @@ class SyncManager:
         }
 
         for i, repo in enumerate(repos, 1):
-            if not hasattr(repo, 'ssh_url') or not repo.ssh_url:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+            if not clone_url:
                 continue
 
             if hasattr(repo, 'local_exists') and repo.local_exists:
@@ -190,7 +207,8 @@ class SyncManager:
             return stats
 
         for i, repo in enumerate(repos, 1):
-            if not hasattr(repo, 'ssh_url') or not repo.ssh_url:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+            if not clone_url:
                 stats["skipped"] += 1
                 continue
 
@@ -245,7 +263,8 @@ class SyncManager:
         }
 
         for i, repo in enumerate(repos, 1):
-            if not hasattr(repo, 'ssh_url') or not repo.ssh_url:
+            clone_url = repo.clone_url or repo.html_url.replace("github.com", "github.com").rstrip('/') + '.git'
+            if not clone_url:
                 continue
 
             user_structure = self.structure_service.get_user_structure(self.current_username)

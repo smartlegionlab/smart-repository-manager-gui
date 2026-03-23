@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QFont
+from smart_repository_manager_core.services.download_service import DownloadService
 
-from core.services.download_service import DownloadService
 from core.ui.dark_theme import ModernDarkTheme
 
 class RepoDownloadWorker(QThread):

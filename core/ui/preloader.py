@@ -9,8 +9,9 @@ from PyQt6.QtGui import QFont
 import sys
 from pathlib import Path
 
-from core.services.github_service import GitHubService
-from core.services.sync_service import SyncService
+from smart_repository_manager_core.services.github_service import GitHubService
+from smart_repository_manager_core.services.sync_service import SyncService
+
 from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.config_service import ConfigService
 from smart_repository_manager_core.services.network_service import NetworkService
