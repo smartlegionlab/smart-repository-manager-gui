@@ -1,6 +1,10 @@
-# Smart Repository Manager GUI <sup>v1.2.2</sup>
+# Smart Repository Manager GUI <sup>v1.2.3</sup>
+
+---
 
 A powerful desktop application for managing GitHub repositories with intelligent synchronization, and comprehensive visual management tools.
+
+---
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/smartlegionlab/smart-repository-manager-gui)](https://github.com/smartlegionlab/smart-repository-manager-gui/)
 ![GitHub top language](https://img.shields.io/github/languages/top/smartlegionlab/smart-repository-manager-gui)
@@ -10,7 +14,17 @@ A powerful desktop application for managing GitHub repositories with intelligent
 
 ---
 
-## 🚀 Overview
+## ⚠️ Disclaimer
+
+**By using this software, you agree to the full disclaimer terms.**
+
+**Summary:** Software provided "AS IS" without warranty. You assume all risks.
+
+**Full legal disclaimer:** See [DISCLAIMER.md](https://github.com/smartlegionlab/smart-repository-manager-gui/blob/master/DISCLAIMER.md)
+
+---
+
+## Overview
 
 **Smart Repository Manager GUI** provides a complete visual interface for managing your GitHub repositories.
 
@@ -22,7 +36,7 @@ A powerful desktop application for managing GitHub repositories with intelligent
 
 ---
 
-## 📋 System Initialization
+## System Initialization
 
 Every session begins with an **8-step mandatory system checkup**:
 
@@ -36,7 +50,7 @@ Every session begins with an **8-step mandatory system checkup**:
 
 ---
 
-## 🔄 Synchronization Operations
+## Synchronization Operations
 
 ### **1. Synchronize All** `(Ctrl+S)`
 Complete bidirectional sync - clones missing repositories and updates existing ones.
@@ -60,7 +74,7 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ---
 
-## 🖥️ Main Dashboard
+## Main Dashboard
 
 ### Repository Table
 - **Lazy Loading**: Loads 20 repositories at a time for optimal performance
@@ -73,10 +87,10 @@ Complete parallel download - download all repositories as ZIP archives.
 
 | Panel | Information Displayed |
 |-------|---------------------|
-| **🔑 Token** | Token validity, API limits (remaining/total), reset time |
-| **📚 Repositories** | Total count, local copies, pending updates |
-| **👤 User** | Display name, public repos, followers count |
-| **🌐 Network** | Connection status, external IP, GitHub accessibility |
+| **Token** | Token validity, API limits (remaining/total), reset time |
+| **Repositories** | Total count, local copies, pending updates |
+| **User** | Display name, public repos, followers count |
+| **Network** | Connection status, external IP, GitHub accessibility |
 
 ### Detail Dialogs
 - **User Information** - Complete GitHub profile with avatar
@@ -86,16 +100,16 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Keyboard Shortcuts
 
-### 📁 File
+### File
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+B` | Create Archive |
 | `F5` | Refresh |
 | `Ctrl+Q` | Exit |
 
-### 🔄 Synchronization
+### Synchronization
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+S` | Synchronize All |
@@ -108,7 +122,7 @@ Complete parallel download - download all repositories as ZIP archives.
 | `Ctrl+Shift+U` | Update Selected |
 | `Ctrl+Shift+D` | Download all repositories |
 
-### 📂 Repositories
+### Repositories
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Shift+B` | Open in Browser |
@@ -117,7 +131,7 @@ Complete parallel download - download all repositories as ZIP archives.
 | `Ctrl+R` | Refresh List |
 | `Ctrl+Del` | Delete Local Copy |
 
-### 🛠️ Tools
+### Tools
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+I` | User Information |
@@ -125,7 +139,7 @@ Complete parallel download - download all repositories as ZIP archives.
 | `Ctrl+Shift+N` | Network Information |
 | `Ctrl+Shift+M` | Storage Management |
 
-### ❓ Help
+### Help
 | Shortcut | Action |
 |----------|--------|
 | `F1` | Documentation |
@@ -134,7 +148,7 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ---
 
-## 👥 Multi-User Management
+## Multi-User Management
 
 - **Add Users**: Quick token validation and GitHub profile fetch
 - **Switch Users**: Instant context switching with visual feedback
@@ -144,7 +158,7 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.8+
@@ -155,7 +169,7 @@ Complete parallel download - download all repositories as ZIP archives.
 ### Generate GitHub Token
 1. Visit [GitHub Tokens](https://github.com/settings/tokens/new)
 2. Select permissions:
-   - ✅ `repo` (full repository access)
+   - `repo` (full repository access)
 3. Generate and copy token
 
 After that, install and run the application:
@@ -182,7 +196,7 @@ python app.py
 
 ---
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 ~/smart_repository_manager/
@@ -200,13 +214,13 @@ python app.py
 
 ---
 
-## 🖼️ Screenshot
+## Screenshot
 
 ![Smart Repository Manager GUI](https://github.com/smartlegionlab/smart-repository-manager-gui/blob/master/data/images/smart_repository_manager_gui.png)
 
 ---
 
-## 🔒 Security
+## Security
 
 - **Local-Only**: All operations performed locally with GitHub API
 - **No Telemetry**: No data is sent to external servers
@@ -226,68 +240,9 @@ A comprehensive command-line tool for users who prefer terminal-based workflows.
 
 ---
 
-## ⚠️ DISCLAIMER
+## Development Status
 
-**THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES OF ANY KIND, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.**
-
-**THE AUTHORS AND COPYRIGHT HOLDERS ASSUME NO LIABILITY FOR:**
-
-1. **DATA LOSS OR CORRUPTION**
-   - Accidental deletion or modification of local repositories
-   - Corruption of Git objects or repository metadata
-   - Loss of uncommitted changes or stashes
-   - Incomplete or failed clone/pull operations
-
-2. **REPOSITORY DAMAGE**
-   - Force push conflicts or unintended overwrites
-   - Broken Git references or detached HEAD states
-   - Failed merge operations or unresolved conflicts
-
-3. **SECURITY INCIDENTS**
-   - Exposure of GitHub Personal Access Tokens
-   - Unauthorized repository access
-   - Credential theft or misuse
-
-4. **NETWORK OR SERVICE ISSUES**
-   - GitHub API rate limiting or downtime
-   - Network connectivity failures
-   - DNS resolution problems
-   - SSL/TLS certificate errors
-
-5. **SYSTEM OR PERFORMANCE ISSUES**
-   - Excessive disk space usage
-   - High CPU or memory consumption
-   - Application crashes or freezes
-   - Operating system compatibility problems
-
-**YOU ASSUME FULL RESPONSIBILITY FOR:**
-
-- **Regular backups** of all repositories and configuration files
-- **Verification** of all operations before execution
-- **Testing** in non-production environments first
-- **Compliance** with GitHub Terms of Service
-
-**BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT:**
-
-- This is development software in active development
-- Features may change without notice
-- Bugs and incomplete features may exist
-- No guaranteed timeline for fixes or updates
-- Technical support is provided on a best-effort basis
-
-**Use at your own risk**. Always maintain backups of your repositories and tokens. This project is in active development and may contain bugs or incomplete features.
-
-- USER ACCEPTS FULL AND UNCONDITIONAL RESPONSIBILITY!!!
-
-Usage of this software constitutes your FULL AND UNCONDITIONAL ACCEPTANCE of this disclaimer. If you do not accept ALL terms and conditions, DO NOT USE THE SOFTWARE.
-
-BY PROCEEDING, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS DISCLAIMER IN ITS ENTIRETY, UNDERSTAND ITS TERMS COMPLETELY, AND ACCEPT THEM WITHOUT RESERVATION OR EXCEPTION.
-
----
-
-## 📌 Development Status
-
-**⚠️ ACTIVE DEVELOPMENT** - This project is under continuous development. While we strive for stability, you may encounter:
+**ACTIVE DEVELOPMENT** - This project is under continuous development. While we strive for stability, you may encounter:
 
 - Interface changes between versions
 - New features in active testing
@@ -299,7 +254,7 @@ BY PROCEEDING, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS DISCLAIMER IN ITS ENTIRET
 
 ---
 
-## 🤝 Support & Contributions
+## Support & Contributions
 
 ### Issues
 - **Bug Reports**: Please include system information, steps to reproduce, and error logs
@@ -314,7 +269,7 @@ BY PROCEEDING, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS DISCLAIMER IN ITS ENTIRET
 
 ---
 
-## 📄 License
+## License
 
 BSD 3-Clause License - See [LICENSE](LICENSE) file for details.
 
@@ -322,7 +277,7 @@ Copyright © 2026, Alexander Suvorov. All rights reserved.
 
 ---
 
-## 👨‍💻 Developer
+## Developer
 
 **Alexander Suvorov**  
 - GitHub: [@smartlegionlab](https://github.com/smartlegionlab)  
