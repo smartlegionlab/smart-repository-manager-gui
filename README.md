@@ -1,4 +1,4 @@
-# Smart Repository Manager GUI <sup>v1.2.4</sup>
+# Smart Repository Manager GUI <sup>v1.2.5</sup>
 
 ---
 
@@ -85,12 +85,12 @@ Complete parallel download - download all repositories as ZIP archives.
 
 ### Status Panels
 
-| Panel | Information Displayed |
-|-------|---------------------|
-| **Token** | Token validity, API limits (remaining/total), reset time |
-| **Repositories** | Total count, local copies, pending updates |
-| **User** | Display name, public repos, followers count |
-| **Network** | Connection status, external IP, GitHub accessibility |
+| Panel            | Information Displayed                                    |
+|------------------|----------------------------------------------------------|
+| **Token**        | Token validity, API limits (remaining/total), reset time |
+| **Repositories** | Total count, local copies, pending updates               |
+| **User**         | Display name, public repos, followers count              |
+| **Network**      | Connection status, external IP, GitHub accessibility     |
 
 ### Detail Dialogs
 - **User Information** - Complete GitHub profile with avatar
@@ -103,48 +103,75 @@ Complete parallel download - download all repositories as ZIP archives.
 ## Keyboard Shortcuts
 
 ### File
-| Shortcut | Action |
-|----------|--------|
+| Shortcut | Action         |
+|----------|----------------|
 | `Ctrl+B` | Create Archive |
-| `F5` | Refresh |
-| `Ctrl+Q` | Exit |
+| `F5`     | Refresh        |
+| `Ctrl+Q` | Exit           |
 
 ### Synchronization
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+S` | Synchronize All |
-| `Ctrl+U` | Update Needed Only |
-| `Ctrl+M` | Clone Missing Only |
-| `Ctrl+Shift+R` | Sync with Repair |
-| `Ctrl+Alt+R` | Re-clone All Repositories |
-| `Ctrl+Shift+S` | Sync Selected |
-| `Ctrl+Shift+C` | Clone Selected |
-| `Ctrl+Shift+U` | Update Selected |
+| Shortcut       | Action                    |
+|----------------|---------------------------|
+| `Ctrl+S`       | Synchronize All           |
+| `Ctrl+U`       | Update Needed Only        |
+| `Ctrl+M`       | Clone Missing Only        |
+| `Ctrl+Shift+R` | Sync with Repair          |
+| `Ctrl+Alt+R`   | Re-clone All Repositories |
+| `Ctrl+Shift+S` | Sync Selected             |
+| `Ctrl+Shift+C` | Clone Selected            |
+| `Ctrl+Shift+U` | Update Selected           |
 | `Ctrl+Shift+D` | Download all repositories |
 
 ### Repositories
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Shift+B` | Open in Browser |
-| `Ctrl+L` | Open Local Folder |
-| `Ctrl+D` | Show Details |
-| `Ctrl+R` | Refresh List |
-| `Ctrl+Del` | Delete Local Copy |
+| Shortcut       | Action            |
+|----------------|-------------------|
+| `Ctrl+Shift+B` | Open in Browser   |
+| `Ctrl+L`       | Open Local Folder |
+| `Ctrl+D`       | Show Details      |
+| `Ctrl+R`       | Refresh List      |
+| `Ctrl+Del`     | Delete Local Copy |
 
 ### Tools
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+I` | User Information |
-| `Ctrl+T` | Token Information |
+| Shortcut       | Action              |
+|----------------|---------------------|
+| `Ctrl+I`       | User Information    |
+| `Ctrl+T`       | Token Information   |
 | `Ctrl+Shift+N` | Network Information |
-| `Ctrl+Shift+M` | Storage Management |
+| `Ctrl+Shift+M` | Storage Management  |
 
 ### Help
-| Shortcut | Action |
-|----------|--------|
-| `F1` | Documentation |
-| `Ctrl+/` | Keyboard shortcuts |
-| `Ctrl+Shift+A` | About |
+| Shortcut       | Action             |
+|----------------|--------------------|
+| `F1`           | Documentation      |
+| `Ctrl+/`       | Keyboard shortcuts |
+| `Ctrl+Shift+A` | About              |
+
+---
+
+### Desktop Integration (Linux)
+
+**Creating Application Shortcuts:**
+
+The application allows you to create desktop entries directly from the menu:
+
+1. **Go to File → Create Desktop Entry**
+2. **Choose locations:**
+   - ✓ Application Menu (`~/.local/share/applications/`) - adds to system app menu
+   - □ Desktop (`~/Desktop/`) - creates shortcut on desktop
+3. **Click "Create Entry"**
+
+**What happens:**
+- Creates `.desktop` file(s) with proper configuration
+- Sets executable permissions automatically
+- Uses application icon if available
+
+**After creation:**
+- **Application Menu**: Log out and back in (or restart desktop) for entry to appear
+- **Desktop shortcut**: May show "Unsecured Application Launcher" warning
+  - Right-click on shortcut → "Allow Launching" or "Trust"
+  - This is a one-time security confirmation
+
+**Note:** This feature is only available on Linux systems with desktop environments that support `.desktop` files (GNOME, KDE, XFCE, etc.).
 
 ---
 
@@ -286,3 +313,4 @@ Copyright © 2026, Alexander Suvorov. All rights reserved.
 ---
 
 *Smart Repository Manager GUI - Visual control for your GitHub universe.*
+

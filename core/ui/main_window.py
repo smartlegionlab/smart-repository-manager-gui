@@ -2,6 +2,7 @@
 import os
 import shutil
 import subprocess
+import sys
 import time
 import traceback
 import webbrowser
@@ -73,10 +74,22 @@ class MainWindow(QMainWindow):
             icon = QIcon(icon_path)
             self.setWindowIcon(icon)
 
+    def create_desktop_entry(self):
+        from core.ui.dialogs.desktop_entry_dialog import DesktopEntryDialog
+
+        dialog = DesktopEntryDialog(self)
+        dialog.exec()
+
     def _create_menu_bar(self):
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
+
+        if sys.platform.startswith('linux'):
+            desktop_entry_action = QAction('Create Desktop Entry...', self)
+            desktop_entry_action.triggered.connect(self.create_desktop_entry)
+            file_menu.addAction(desktop_entry_action)
+            file_menu.addSeparator()
 
         create_archive_action = QAction("Create &Archive...", self)
         create_archive_action.setShortcut(QKeySequence("Ctrl+B"))
