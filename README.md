@@ -1,4 +1,4 @@
-# Smart Repository Manager GUI <sup>v1.2.3</sup>
+# Smart Repository Manager GUI <sup>v1.2.4</sup>
 
 ---
 
