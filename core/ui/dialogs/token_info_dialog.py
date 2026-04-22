@@ -345,7 +345,7 @@ class TokenInfoDialog(QDialog):
                 'username': token_info.username,
                 'scopes': token_info.scopes or "Not specified",
                 'rate_limit': token_info.rate_limit,
-                'rate_remaining': token_info.rate_remaining,
+                'remaining': token_info.rate_remaining,
                 'created_at': token_info.created_at[:10] if token_info.created_at else "Unknown",
                 'token': current_token
             }

@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QAction, QKeySequence
+from PyQt6.QtGui import QFont, QAction, QKeySequence, QIcon
 from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
@@ -53,6 +53,8 @@ class MainWindow(QMainWindow):
 
         self.app_state.state_changed.connect(self.on_state_changed)
 
+        self.setup_application_icon()
+
         self.setWindowTitle(f"Smart Repository Manager {ver}")
         self._create_menu_bar()
         self._setup_ui()
@@ -60,6 +62,16 @@ class MainWindow(QMainWindow):
         self.sync_manager = SyncManager(self.app_state)
         self._initialize_ui()
         QTimer.singleShot(100, self._show_preloader)
+
+    def setup_application_icon(self):
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "icons", "icon.png")
+
+        if not os.path.exists(icon_path):
+            icon_path = os.path.join(os.path.dirname(__file__), "icon.png")
+
+        if os.path.exists(icon_path):
+            icon = QIcon(icon_path)
+            self.setWindowIcon(icon)
 
     def _create_menu_bar(self):
         menu_bar = self.menuBar()

@@ -16,8 +16,8 @@ from smart_repository_manager_core.services.github_service import GitHubService
 
 
 class TokenSelectionDialog(QDialog):
-    def __init__(self, config_path=None):
-        super().__init__()
+    def __init__(self, config_path=None, parent=None):
+        super().__init__(parent)
         self.selected_username = None
         self.user_items = {}
 
@@ -28,6 +28,10 @@ class TokenSelectionDialog(QDialog):
 
         self.setWindowTitle("Select GitHub Account")
         self.setFixedSize(650, 600)
+
+        if parent and parent.windowIcon():
+            self.setWindowIcon(parent.windowIcon())
+
         self._setup_ui()
         self._load_users()
 

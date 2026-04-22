@@ -1,11 +1,12 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
+import os
 import time
 from datetime import datetime
 
 import requests
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QFrame, QPushButton, QTextEdit, QHBoxLayout
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 import sys
 from pathlib import Path
 
@@ -42,8 +43,19 @@ class SmartPreloader(QWidget):
         ]
 
         self.setFixedSize(600, 500)
+        self.setup_application_icon()
         self.setWindowTitle("Smart Repository Manager - Initialization")
         self._setup_ui()
+
+    def setup_application_icon(self):
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "icons", "icon.png")
+
+        if not os.path.exists(icon_path):
+            icon_path = os.path.join(os.path.dirname(__file__), "icon.png")
+
+        if os.path.exists(icon_path):
+            icon = QIcon(icon_path)
+            self.setWindowIcon(icon)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -212,7 +224,7 @@ class SmartPreloader(QWidget):
     def _open_user_selection(self):
         from core.ui.dialogs.token_selection_dialog import TokenSelectionDialog
 
-        dialog = TokenSelectionDialog()
+        dialog = TokenSelectionDialog(parent=self)
         if dialog.exec():
             selected_user = dialog.get_selected_user()
             if selected_user:
@@ -379,7 +391,7 @@ class SmartPreloader(QWidget):
                 'username': token_info.username,
                 'scopes': token_info.scopes or "Not specified",
                 'rate_limit': token_info.rate_limit,
-                'rate_remaining': token_info.rate_remaining,
+                'remaining': token_info.rate_remaining,
                 'created_at': token_info.created_at[:10] if token_info.created_at else "Unknown"
             }
             self.app_state.update(token_info=token_data)
