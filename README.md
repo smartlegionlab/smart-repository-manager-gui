@@ -217,6 +217,9 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+sudo apt install libxcb-cursor0
+
+
 # Launch application
 python app.py
 ```
