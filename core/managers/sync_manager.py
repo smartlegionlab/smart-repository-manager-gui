@@ -25,7 +25,7 @@ class SyncManager:
         if not self.current_username:
             return {}
 
-        repos = self.app_state.get('repositories', [])
+        repos = self.app_state.data.repositories
 
         user_structure = self.structure_service.get_user_structure(self.current_username)
         local_count = 0

@@ -196,7 +196,7 @@ class NetworkInfoDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.refresh_btn = QPushButton("🔄 Refresh")
+        self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.setMinimumWidth(120)
         self.refresh_btn.clicked.connect(self.refresh_network_info)
         self.refresh_btn.setStyleSheet(f"""

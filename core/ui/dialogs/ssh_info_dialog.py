@@ -169,7 +169,7 @@ class SSHInfoDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.refresh_btn = QPushButton("🔄 Refresh")
+        self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.setMinimumWidth(120)
         self.refresh_btn.clicked.connect(self.refresh_ssh_info)
         self.refresh_btn.setStyleSheet(f"""
@@ -703,7 +703,7 @@ class SSHInfoDialog(QDialog):
         )
 
         self.set_tools_enabled(True)
-        self.gen_key_btn.setText("🔑 Generate Key")
+        self.gen_key_btn.setText("Generate Key")
 
         if success:
             QMessageBox.information(self, "Success", message)
@@ -804,7 +804,7 @@ class SSHInfoDialog(QDialog):
         else:
             QMessageBox.critical(self, "Error", message)
         self.test_conn_btn.setEnabled(True)
-        self.test_conn_btn.setText('🔗 Test Connection')
+        self.test_conn_btn.setText('Test Connection')
 
     def close_dialog(self):
         if self.worker and self.worker.isRunning():

@@ -1,15 +1,18 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 from pathlib import Path
+
 import requests
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor, QPainterPath
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QGroupBox, QGridLayout,
-    QWidget, QScrollArea, QMessageBox
+    QWidget, QScrollArea, QMessageBox,
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor, QPainterPath
+
 from smart_repository_manager_core.services.github_service import GitHubService
 
+from core.models.state import UserData
 from core.ui.dark_theme import ModernDarkTheme
 
 
@@ -30,24 +33,10 @@ class UserInfoDialog(QDialog):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background-color: transparent;
-            }
-            QScrollBar:vertical {
-                border: none;
-                background: #1a1a1a;
-                width: 10px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background: #3a3a3a;
-                min-height: 20px;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #4a4a4a;
-            }
+            QScrollArea { border: none; background-color: transparent; }
+            QScrollBar:vertical { border: none; background: #1a1a1a; width: 10px; margin: 0px; }
+            QScrollBar::handle:vertical { background: #3a3a3a; min-height: 20px; border-radius: 5px; }
+            QScrollBar::handle:vertical:hover { background: #4a4a4a; }
         """)
 
         content_widget = QWidget()
@@ -58,14 +47,14 @@ class UserInfoDialog(QDialog):
         self.create_header_section(content_layout)
 
         separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShape(QFrame.HLine)
         separator.setStyleSheet(f"background-color: {ModernDarkTheme.BORDER_COLOR}; height: 1px;")
         content_layout.addWidget(separator)
 
         self.create_user_info_section(content_layout)
 
         separator2 = QFrame()
-        separator2.setFrameShape(QFrame.Shape.HLine)
+        separator2.setFrameShape(QFrame.HLine)
         separator2.setStyleSheet(f"background-color: {ModernDarkTheme.BORDER_COLOR}; height: 1px;")
         content_layout.addWidget(separator2)
 
@@ -79,7 +68,7 @@ class UserInfoDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.refresh_btn = QPushButton("🔄 Refresh")
+        self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.setMinimumWidth(120)
         self.refresh_btn.clicked.connect(self.update_refresh_btn)
         self.refresh_btn.setStyleSheet(f"""
@@ -89,9 +78,7 @@ class UserInfoDialog(QDialog):
                 font-weight: 500;
                 border: none;
             }}
-            QPushButton:hover {{
-                background-color: #1a75ff;
-            }}
+            QPushButton:hover {{ background-color: #1a75ff; }}
         """)
 
         close_btn = QPushButton("Close")
@@ -103,14 +90,11 @@ class UserInfoDialog(QDialog):
                 color: #b0b0b0;
                 border: 1px solid #3a3a3a;
             }
-            QPushButton:hover {
-                background-color: #2a2a2a;
-            }
+            QPushButton:hover { background-color: #2a2a2a; }
         """)
 
         button_layout.addWidget(self.refresh_btn)
         button_layout.addWidget(close_btn)
-
         main_layout.addLayout(button_layout)
 
     def create_header_section(self, parent_layout):
@@ -123,15 +107,14 @@ class UserInfoDialog(QDialog):
         title_font.setBold(True)
         title_label.setFont(title_font)
         title_label.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR};")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setAlignment(Qt.AlignCenter)
 
         subtitle_label = QLabel("Your GitHub account details")
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setAlignment(Qt.AlignCenter)
         subtitle_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
 
         header_layout.addWidget(title_label)
         header_layout.addWidget(subtitle_label)
-
         parent_layout.addLayout(header_layout)
 
     def create_user_info_section(self, parent_layout):
@@ -161,9 +144,8 @@ class UserInfoDialog(QDialog):
         self.avatar_label = QLabel()
         self.avatar_label.setFixedSize(100, 100)
         self.avatar_label.setStyleSheet("border-radius: 50px; border: 2px solid #3a3a3a;")
-
         left_layout.addWidget(self.avatar_label)
-        left_layout.setAlignment(self.avatar_label, Qt.AlignmentFlag.AlignCenter)
+        left_layout.setAlignment(self.avatar_label, Qt.AlignCenter)
 
         right_layout = QVBoxLayout()
         right_layout.setSpacing(10)
@@ -230,14 +212,13 @@ class UserInfoDialog(QDialog):
             ("Following:", self.following_label),
             ("Account Created:", self.created_label),
             ("Location:", self.location_label),
-            ("Company:", self.company_label)
+            ("Company:", self.company_label),
         ]
 
         for i, (label_text, widget) in enumerate(labels):
             label = QLabel(label_text)
             label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
             layout.addWidget(label, i, 0)
-
             widget.setStyleSheet(f"color: {ModernDarkTheme.TEXT_PRIMARY}; font-size: 12px; font-weight: 500;")
             layout.addWidget(widget, i, 1)
 
@@ -245,14 +226,13 @@ class UserInfoDialog(QDialog):
         parent_layout.addWidget(group)
 
     def load_user_data(self):
-        user_data = self.app_state.get('user_data')
+        user_data: UserData = self.app_state.data.user_data
 
-        if not user_data:
+        if user_data is None:
             self.set_default_avatar()
             self.username_label.setText("@no-user")
             self.name_label.setText("No user data available")
             self.bio_label.setText("Please run system checkup first")
-
             self.repos_label.setText("0")
             self.public_repos_label.setText("0")
             self.private_repos_label.setText("0")
@@ -263,24 +243,21 @@ class UserInfoDialog(QDialog):
             self.company_label.setText("Unknown")
             return
 
-        self.load_avatar(user_data.get('username'))
+        self.load_avatar(user_data.username)
 
-        self.username_label.setText(f"@{user_data.get('username', 'unknown')}")
-        self.name_label.setText(user_data.get('name', 'Not specified'))
-        self.bio_label.setText(user_data.get('bio', 'No bio available') or 'No bio available')
+        self.username_label.setText(f"@{user_data.username}")
+        self.name_label.setText(user_data.name or "Not specified")
+        self.bio_label.setText(user_data.bio or "No bio available")
 
-        total_repos = len(self.app_state.get('repositories', []))
-        private_count = self.app_state.get('total_private', 0)
-        public_count = self.app_state.get('total_public', 0)
-
-        self.repos_label.setText(str(total_repos))
-        self.public_repos_label.setText(str(public_count))
-        self.private_repos_label.setText(str(private_count))
-        self.followers_label.setText(str(user_data.get('followers', 0)))
-        self.following_label.setText(str(user_data.get('following', 0)))
-        self.created_label.setText(user_data.get('created_date', 'Unknown'))
-        self.location_label.setText(user_data.get('location', 'Not specified') or 'Not specified')
-        self.company_label.setText(user_data.get('company', 'Not specified') or 'Not specified')
+        d = self.app_state.data
+        self.repos_label.setText(str(d.repositories_count))
+        self.public_repos_label.setText(str(d.total_public))
+        self.private_repos_label.setText(str(d.total_private))
+        self.followers_label.setText(str(user_data.followers))
+        self.following_label.setText(str(user_data.following))
+        self.created_label.setText(user_data.created_date or "Unknown")
+        self.location_label.setText(user_data.location or "Not specified")
+        self.company_label.setText(user_data.company or "Not specified")
 
     def load_avatar(self, username):
         try:
@@ -290,13 +267,12 @@ class UserInfoDialog(QDialog):
             if avatar_path.exists():
                 pixmap = QPixmap(str(avatar_path))
                 if not pixmap.isNull():
-                    circular_pixmap = self.make_avatar_circular(pixmap)
-                    self.avatar_label.setPixmap(circular_pixmap)
+                    self.avatar_label.setPixmap(self.make_avatar_circular(pixmap))
                     return
 
-            user_data = self.app_state.get('user_data')
-            if user_data and 'avatar_url' in user_data:
-                response = requests.get(user_data['avatar_url'], timeout=10)
+            user_data: UserData = self.app_state.data.user_data
+            if user_data and user_data.avatar_url:
+                response = requests.get(user_data.avatar_url, timeout=10)
                 if response.status_code == 200:
                     user_dir.mkdir(parents=True, exist_ok=True)
                     with open(avatar_path, 'wb') as f:
@@ -305,8 +281,7 @@ class UserInfoDialog(QDialog):
                     pixmap = QPixmap()
                     pixmap.loadFromData(response.content)
                     if not pixmap.isNull():
-                        circular_pixmap = self.make_avatar_circular(pixmap)
-                        self.avatar_label.setPixmap(circular_pixmap)
+                        self.avatar_label.setPixmap(self.make_avatar_circular(pixmap))
                         return
 
             self.set_default_avatar(username[0].upper() if username else "?")
@@ -317,18 +292,20 @@ class UserInfoDialog(QDialog):
 
     def make_avatar_circular(self, pixmap: QPixmap, size: int = 90) -> QPixmap:
         circular_pixmap = QPixmap(size, size)
-        circular_pixmap.fill(Qt.GlobalColor.transparent)
+        circular_pixmap.fill(Qt.transparent)
 
         painter = QPainter(circular_pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing)
 
         path = QPainterPath()
         path.addEllipse(0, 0, size, size)
         painter.setClipPath(path)
 
-        scaled_pixmap = pixmap.scaled(size, size,
-                                      Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                                      Qt.TransformationMode.SmoothTransformation)
+        scaled_pixmap = pixmap.scaled(
+            size, size,
+            Qt.KeepAspectRatioByExpanding,
+            Qt.SmoothTransformation,
+        )
 
         x = (size - scaled_pixmap.width()) // 2
         y = (size - scaled_pixmap.height()) // 2
@@ -342,76 +319,59 @@ class UserInfoDialog(QDialog):
         pixmap.fill(QColor(70, 70, 70))
 
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
+        painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(QColor(100, 100, 100))
         painter.drawEllipse(0, 0, 100, 100)
-
-        painter.setFont(QFont("Arial", 40, QFont.Weight.Bold))
+        painter.setFont(QFont("Arial", 40, QFont.Bold))
         painter.setPen(QColor(200, 200, 200))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, initial)
-
+        painter.drawText(pixmap.rect(), Qt.AlignCenter, initial)
         painter.end()
+
         self.avatar_label.setPixmap(pixmap)
 
     def update_refresh_btn(self):
         self.refresh_btn.setEnabled(False)
         self.refresh_btn.setText("Refreshing...")
-
         QTimer.singleShot(300, self.refresh_user_data)
 
     def refresh_user_data(self):
         try:
-            current_token = self.app_state.get('current_token')
+            current_token = self.app_state.data.current_token
             if not current_token:
-                QMessageBox.warning(
-                    self,
-                    "Warning",
-                    "No active token found",
-                    QMessageBox.StandardButton.Ok
-                )
+                QMessageBox.warning(self, "Warning", "No active token found", QMessageBox.Ok)
             else:
                 github_service = GitHubService(current_token)
                 valid, user = github_service.validate_token()
                 if not valid or not user:
-                    QMessageBox.warning(
-                        self,
-                        "Warning",
-                        "Failed to validate token",
-                        QMessageBox.StandardButton.Ok
-                    )
+                    QMessageBox.warning(self, "Warning", "Failed to validate token", QMessageBox.Ok)
                 else:
-                    user_data = {
-                        'username': user.username,
-                        'name': user.name,
-                        'bio': user.bio,
-                        'public_repos': user.public_repos,
-                        'followers': user.followers,
-                        'following': user.following,
-                        'created_date': user.created_date,
-                        'html_url': user.html_url,
-                        'location': getattr(user, 'location', None),
-                        'company': getattr(user, 'company', None),
-                        'avatar_url': getattr(user, 'avatar_url', None)
-                    }
-
+                    user_data = UserData(
+                        username=user.username,
+                        name=user.name,
+                        bio=user.bio,
+                        public_repos=user.public_repos,
+                        followers=user.followers,
+                        following=user.following,
+                        created_date=user.created_date,
+                        html_url=user.html_url,
+                        location=getattr(user, 'location', None),
+                        company=getattr(user, 'company', None),
+                        avatar_url=getattr(user, 'avatar_url', None),
+                    )
                     self.app_state.update(user_data=user_data)
                     self.load_user_data()
-
                     QMessageBox.information(
-                        self,
-                        "Success",
+                        self, "Success",
                         f"User information refreshed for @{user.username}",
-                        QMessageBox.StandardButton.Ok
+                        QMessageBox.Ok,
                     )
 
         except Exception as e:
             QMessageBox.critical(
-                self,
-                "Error",
+                self, "Error",
                 f"Failed to refresh user info: {str(e)}",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
         finally:
             self.refresh_btn.setEnabled(True)
-            self.refresh_btn.setText("🔄 Refresh")
+            self.refresh_btn.setText("Refresh")

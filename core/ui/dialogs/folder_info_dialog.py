@@ -114,7 +114,7 @@ class StorageManagementDialog(QDialog):
     def __init__(self, app_state, parent=None):
         super().__init__(parent)
         self.app_state = app_state
-        self.username = app_state.get('current_user')
+        self.username = app_state.data.current_user
         self.storage_service = StorageService()
         self.analysis_thread = None
         self.folder_action_widgets = []
@@ -137,17 +137,17 @@ class StorageManagementDialog(QDialog):
         self.tab_widget.addTab(self.overview_tab, "📊 Overview")
 
         self.repos_tab = self.create_repositories_tab()
-        self.tab_widget.addTab(self.repos_tab, "📁 Repositories")
+        self.tab_widget.addTab(self.repos_tab, "Repositories")
 
         self.cleanup_tab = self.create_cleanup_tab()
-        self.tab_widget.addTab(self.cleanup_tab, "🗑️ Cleanup")
+        self.tab_widget.addTab(self.cleanup_tab, "Cleanup")
 
         main_layout.addWidget(self.tab_widget)
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        self.refresh_btn = QPushButton("🔄 Refresh")
+        self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.setFixedHeight(25)
         self.refresh_btn.clicked.connect(self.refresh_storage_info)
 
@@ -228,12 +228,12 @@ class StorageManagementDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(5)
 
-        self.delete_repo_btn = QPushButton("🗑️ Delete")
+        self.delete_repo_btn = QPushButton("Delete")
         self.delete_repo_btn.setFixedHeight(22)
         self.delete_repo_btn.clicked.connect(self.delete_selected_repository)
         self.delete_repo_btn.setEnabled(False)
 
-        self.open_repo_btn = QPushButton("📂 Open")
+        self.open_repo_btn = QPushButton("Open")
         self.open_repo_btn.setFixedHeight(22)
         self.open_repo_btn.clicked.connect(self.open_selected_repository)
         self.open_repo_btn.setEnabled(False)
@@ -263,7 +263,7 @@ class StorageManagementDialog(QDialog):
 
         self.archives_info_label = QLabel("Checking...")
         self.archives_info_label.setStyleSheet("font-size: 11px;")
-        self.clean_archives_btn = QPushButton("🗑️ Clean")
+        self.clean_archives_btn = QPushButton("Clean")
         self.clean_archives_btn.setFixedHeight(22)
         self.clean_archives_btn.clicked.connect(lambda: self.cleanup_specific_folder("archives"))
         self.clean_archives_btn.setStyleSheet("""
@@ -290,7 +290,7 @@ class StorageManagementDialog(QDialog):
 
         self.logs_info_label = QLabel("Checking...")
         self.logs_info_label.setStyleSheet("font-size: 11px;")
-        self.clean_logs_btn = QPushButton("🗑️ Clean")
+        self.clean_logs_btn = QPushButton("Clean")
         self.clean_logs_btn.setFixedHeight(22)
         self.clean_logs_btn.clicked.connect(lambda: self.cleanup_specific_folder("logs"))
         self.clean_logs_btn.setStyleSheet("""
@@ -317,7 +317,7 @@ class StorageManagementDialog(QDialog):
 
         self.downloads_info_label = QLabel("Checking...")
         self.downloads_info_label.setStyleSheet("font-size: 11px;")
-        self.clean_downloads_btn = QPushButton("🗑️ Clean")
+        self.clean_downloads_btn = QPushButton("Clean")
         self.clean_downloads_btn.setFixedHeight(22)
         self.clean_downloads_btn.clicked.connect(lambda: self.cleanup_specific_folder("downloads"))
         self.clean_downloads_btn.setStyleSheet("""
@@ -344,7 +344,7 @@ class StorageManagementDialog(QDialog):
 
         self.temp_info_label = QLabel("Checking...")
         self.temp_info_label.setStyleSheet("font-size: 11px;")
-        self.clean_temp_btn = QPushButton("🗑️ Clean")
+        self.clean_temp_btn = QPushButton("Clean")
         self.clean_temp_btn.setFixedHeight(22)
         self.clean_temp_btn.clicked.connect(lambda: self.cleanup_specific_folder("temp"))
         self.clean_temp_btn.setStyleSheet("""
@@ -431,7 +431,7 @@ class StorageManagementDialog(QDialog):
         self.progress_bar.setVisible(False)
 
         self.refresh_btn.setEnabled(True)
-        self.refresh_btn.setText("🔄 Refresh")
+        self.refresh_btn.setText("Refresh")
 
         if results.get("success"):
             self.update_overview_tab(results["storage_info"])
@@ -472,11 +472,11 @@ class StorageManagementDialog(QDialog):
 
         if "folders" in storage_info:
             folder_types = [
-                ("repositories", "📚 Repositories"),
-                ("archives", "📦 Archives"),
-                ("downloads", "📥 Downloads"),
-                ("logs", "📝 Logs"),
-                ("temp", "🗑️ Temp"),
+                ("repositories", "Repositories"),
+                ("archives", "Archives"),
+                ("downloads", "Downloads"),
+                ("logs", "Logs"),
+                ("temp", "Temp"),
             ]
 
             row = 0
@@ -682,7 +682,7 @@ class StorageManagementDialog(QDialog):
             QMessageBox.information(self, "Success", "Repository deleted")
             self.refresh_storage_info()
 
-            current_local = self.app_state.get('local_repositories_count', 0)
+            current_local = self.app_state.data.local_repositories_count
             self.app_state.update(local_repositories_count=max(0, current_local - 1))
         else:
             QMessageBox.warning(self, "Error", result.get("error", "Unknown error"))

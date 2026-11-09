@@ -27,11 +27,13 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QKeySequence, QIcon
+
 from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
 
 from core.managers.state_manager import ApplicationState
+from core.models.state import UserData, TokenInfo, RateLimits
 from core.services.storage_service import StorageService
 from core.managers.sync_manager import SyncManager
 from core.ui.dark_theme import ModernDarkTheme
@@ -48,6 +50,10 @@ from core import __version__ as ver
 from core.ui.dialogs.repo_download_dialog import RepoDownloadDialog
 
 
+BUTTON_MIN_WIDTH = 140
+BUTTON_FIXED_HEIGHT = 36
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -57,7 +63,7 @@ class MainWindow(QMainWindow):
 
         self.setup_application_icon()
 
-        self.setWindowTitle(f"Smart Repository Manager {ver}")
+        self.setWindowTitle("Smart Repository Manager")
         self._create_menu_bar()
         self._setup_ui()
         self.center_on_screen()
@@ -66,7 +72,6 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(100, self._show_preloader)
 
     def setup_application_icon(self):
-        from pathlib import Path
         project_root = Path(__file__).parent.parent
         icon_path = project_root / "data" / "icons" / "icon.png"
 
@@ -77,7 +82,7 @@ class MainWindow(QMainWindow):
         from core.ui.dialogs.desktop_entry_dialog import DesktopEntryDialog
 
         dialog = DesktopEntryDialog(self)
-        dialog.exec()
+        dialog.exec_()
 
     def _create_menu_bar(self):
         menu_bar = self.menuBar()
@@ -252,7 +257,7 @@ class MainWindow(QMainWindow):
         self.create_status_bar()
 
     def _initialize_ui(self):
-        self.user_btn.setText("👤 ---")
+        self.user_btn.setText("@---")
         self.user_btn.setVisible(False)
         self.status_label.setText("Initializing...")
 
@@ -261,26 +266,27 @@ class MainWindow(QMainWindow):
 
     def update_token_info_panel(self):
         try:
-            token_info = self.app_state.get('token_info')
-            rate_limits = self.app_state.get('rate_limits')
+            d = self.app_state.data
+            token_info: TokenInfo = d.token_info
+            rate_limits: RateLimits = d.rate_limits
 
             if not token_info:
                 token_lines = [
                     "Checking...",
                     "API: ?/?",
-                    "Reset: ---"
+                    "Reset: ---",
                 ]
             else:
-                token_status = "✅ Valid" if self.app_state.get('current_token') else "❌ Invalid"
+                token_status = "Valid" if d.current_token else "Invalid"
 
-                remaining = rate_limits.get('remaining', '?') if rate_limits else '?'
-                limit = rate_limits.get('limit', '?') if rate_limits else '?'
-                reset_time = rate_limits.get('reset_time', '---') if rate_limits else '---'
+                remaining = rate_limits.remaining if rate_limits and rate_limits.remaining is not None else '?'
+                limit = rate_limits.limit if rate_limits and rate_limits.limit is not None else '?'
+                reset_time = rate_limits.reset_time if rate_limits and rate_limits.reset_time else '---'
 
                 token_lines = [
                     token_status,
                     f"API: {remaining}/{limit}",
-                    f"Reset: {reset_time}"
+                    f"Reset: {reset_time}",
                 ]
 
             for i, line in enumerate(token_lines):
@@ -292,34 +298,35 @@ class MainWindow(QMainWindow):
 
     def update_network_info_panel(self):
         try:
-            network_status = self.app_state.get('network_status', 'unknown')
-            github_access = self.app_state.get('github_access', False)
-            github_message = self.app_state.get('github_access_message', '')
+            d = self.app_state.data
+            network_status = d.network_status
+            github_access = d.github_access
+            github_message = d.github_access_message
 
             if network_status == 'online':
-                online_text = "✅ Online"
+                online_text = "Online"
             elif network_status == 'offline':
-                online_text = "❌ Offline"
+                online_text = "Offline"
             elif network_status == 'error':
-                online_text = "❌ Error"
+                online_text = "Error"
             else:
-                online_text = "⏳ Checking..."
+                online_text = "Checking..."
 
             if github_access:
-                github_text = "✅ OK"
+                github_text = "OK"
                 if github_message:
-                    github_text = f"✅ {github_message}"
+                    github_text = f"OK - {github_message}"
             else:
-                github_text = "❌ Failed"
+                github_text = "Failed"
                 if github_message:
-                    github_text = f"❌ {github_message}"
+                    github_text = f"Failed - {github_message}"
 
-            external_ip = self.app_state.get('external_ip')
+            external_ip = d.external_ip
 
             network_lines = [
                 f"Status: {online_text}",
-                f"IP: {external_ip or "---"}",
-                f"GitHub: {github_text}"
+                f"IP: {external_ip or '---'}",
+                f"GitHub: {github_text}",
             ]
 
             for i, line in enumerate(network_lines):
@@ -339,28 +346,28 @@ class MainWindow(QMainWindow):
         self.info_layout.setSpacing(15)
         self.info_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.token_stats_widget = self._create_stat_item("🔑", "Token", [
+        self.token_stats_widget = self._create_stat_item("Token", [
             "Checking...",
             "API: ?/?",
-            "Reset: ---"
+            "Reset: ---",
         ])
 
-        self.repos_stats_widget = self._create_stat_item("📚", "Repositories", [
+        self.repos_stats_widget = self._create_stat_item("Repositories", [
             "Total: 0",
             "Local: 0",
-            "Updates: 0"
+            "Updates: 0",
         ])
 
-        self.user_stats_widget = self._create_stat_item("👤", "User", [
+        self.user_stats_widget = self._create_stat_item("User", [
             "Name: ---",
             "Public: 0",
-            "Followers: 0"
+            "Followers: 0",
         ])
 
-        self.network_stats_widget = self._create_stat_item("🌐", "Network", [
+        self.network_stats_widget = self._create_stat_item("Network", [
             "Status: Checking",
             "IP: ---",
-            "GitHub: ?"
+            "GitHub: ?",
         ])
 
         self.info_layout.addWidget(self.token_stats_widget, 1)
@@ -370,31 +377,28 @@ class MainWindow(QMainWindow):
 
         parent_layout.addWidget(self.info_widget)
 
-    def _create_stat_item(self, icon, title, lines):
+    def _create_stat_item(self, title, lines):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(5)
         layout.setContentsMargins(15, 10, 15, 10)
 
-        title_layout = QHBoxLayout()
-        title_layout.setSpacing(8)
-
-        icon_label = QLabel(icon)
-        icon_label.setStyleSheet("font-size: 14px;")
-
         title_label = QLabel(title)
-        title_label.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR}; font-size: 13px; font-weight: 600;")
-
-        title_layout.addWidget(icon_label)
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
-
-        layout.addLayout(title_layout)
+        title_label.setStyleSheet(
+            f"color: {ModernDarkTheme.PRIMARY_COLOR}; "
+            f"font-size: 13px; "
+            f"font-weight: 600;"
+        )
+        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        layout.addWidget(title_label)
 
         line_labels = []
         for line in lines:
             line_label = QLabel(line)
-            line_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_PRIMARY}; font-size: 11px;")
+            line_label.setStyleSheet(
+                f"color: {ModernDarkTheme.TEXT_PRIMARY}; font-size: 11px;"
+            )
+            line_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             layout.addWidget(line_label)
             line_labels.append(line_label)
 
@@ -420,8 +424,8 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(self.repo_table, 1)
 
     def clone_single_repository(self, repo):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -431,22 +435,22 @@ class MainWindow(QMainWindow):
             self,
             "Clone Repository",
             f"Clone repository '{repo.name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, [repo], "clone_missing", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             self.repo_table.update_repository_status(repo.name, True, False)
             QTimer.singleShot(1000, self._force_update_ui)
 
     def reclone_single_repository(self, repo):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -457,7 +461,7 @@ class MainWindow(QMainWindow):
                 self,
                 "Cannot Re-clone",
                 f"Repository '{repo.name}' is not cloned locally.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
             return
 
@@ -467,11 +471,11 @@ class MainWindow(QMainWindow):
             f"Re-clone repository '{repo.name}'?\n\n"
             f"This will DELETE the local copy and clone it again from GitHub.\n"
             f"This action cannot be undone!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         structure_service = StructureService()
@@ -487,20 +491,20 @@ class MainWindow(QMainWindow):
                         self,
                         "Error",
                         f"Failed to delete local copy: {str(e)}",
-                        QMessageBox.StandardButton.Ok
+                        QMessageBox.Ok,
                     )
                     return
 
         dialog = SyncDialog(username, token, [repo], "clone_missing", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             self.repo_table.update_repository_status(repo.name, True, False)
             QMessageBox.information(
                 self,
                 "Success",
                 f"Repository '{repo.name}' re-cloned successfully.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
             QTimer.singleShot(1000, self._force_update_ui)
 
@@ -521,14 +525,17 @@ class MainWindow(QMainWindow):
         title_row.addWidget(title_label)
         title_row.addStretch()
 
-        self.user_btn = QPushButton("👤 ---")
+        self.user_btn = QPushButton("@---")
         self.user_btn.setFlat(True)
+        self.user_btn.setMinimumWidth(160)
+        self.user_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         self.user_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {ModernDarkTheme.TEXT_SECONDARY};
                 font-size: 14px;
                 padding: 5px 15px;
                 border: none;
+                text-align: right;
             }}
             QPushButton:hover {{
                 color: {ModernDarkTheme.PRIMARY_COLOR};
@@ -546,14 +553,14 @@ class MainWindow(QMainWindow):
         subtitle_font = QFont()
         subtitle_font.setPointSize(14)
         subtitle_label.setFont(subtitle_font)
-        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setAlignment(Qt.AlignCenter)
         subtitle_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY};")
 
         separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShape(QFrame.HLine)
         separator.setStyleSheet(f"""
-            background-color: {ModernDarkTheme.BORDER_COLOR}; 
-            height: 1px; 
+            background-color: {ModernDarkTheme.BORDER_COLOR};
+            height: 1px;
             margin: 10px 0;
         """)
 
@@ -567,61 +574,67 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout(button_widget)
         button_layout.setSpacing(10)
 
-        self.update_available_btn = QPushButton(f"🔄 Update (0)")
-        self.update_available_btn.setMinimumWidth(80)
+        self.update_available_btn = QPushButton("Update (0)")
+        self.update_available_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        self.update_available_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         self.update_available_btn.clicked.connect(self.update_available_repositories)
-        self.update_available_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        background-color: #ff9900;
-                        color: white;
-                        font-weight: bold;
-                    }}
-                    QPushButton:hover {{
-                        background-color: #e68a00;
-                    }}
-                """)
+        self.update_available_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff9900;
+                color: white;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #e68a00;
+            }
+        """)
         self.update_available_btn.setVisible(False)
 
-        self.sync_actions_btn = QPushButton("🔄 Sync Actions ▼")
-        self.sync_actions_btn.setMinimumWidth(80)
+        self.sync_actions_btn = QPushButton("Sync Actions")
+        self.sync_actions_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        self.sync_actions_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         self.sync_actions_btn.clicked.connect(self.show_sync_actions_menu)
         self.sync_actions_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        background-color: {ModernDarkTheme.PRIMARY_COLOR};
-                        color: white;
-                        font-weight: bold;
-                    }}
-                    QPushButton:hover {{
-                        background-color: #1a75ff;
-                    }}
-                """)
+            QPushButton {{
+                background-color: {ModernDarkTheme.PRIMARY_COLOR};
+                color: white;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: #1a75ff;
+            }}
+        """)
 
-        folder_info_btn = QPushButton("📁 Folders")
-        folder_info_btn.setMinimumWidth(80)
+        folder_info_btn = QPushButton("Folders")
+        folder_info_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        folder_info_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         folder_info_btn.clicked.connect(self.show_folder_info)
 
-        network_info_btn = QPushButton("🌐 Network")
-        network_info_btn.setMinimumWidth(80)
+        network_info_btn = QPushButton("Network")
+        network_info_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        network_info_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         network_info_btn.clicked.connect(self.show_network_info)
-        network_info_btn.setStyleSheet(f"""
-            QPushButton {{
+        network_info_btn.setStyleSheet("""
+            QPushButton {
                 background-color: #2a2a2a;
                 color: white;
                 font-weight: 500;
                 border: 1px solid #3a3a3a;
-            }}
-            QPushButton:hover {{
+            }
+            QPushButton:hover {
                 background-color: #333333;
                 border-color: #4a4a4a;
-            }}
+            }
         """)
 
-        token_info_btn = QPushButton("🔑 Token")
-        token_info_btn.setMinimumWidth(80)
+        token_info_btn = QPushButton("Token")
+        token_info_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        token_info_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         token_info_btn.clicked.connect(self.show_token_info)
 
         exit_btn = QPushButton("Exit")
-        exit_btn.setMinimumWidth(80)
+        exit_btn.setMinimumWidth(BUTTON_MIN_WIDTH)
+        exit_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
         exit_btn.clicked.connect(self.confirm_exit)
         exit_btn.setStyleSheet("""
             QPushButton {
@@ -645,7 +658,6 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(button_widget)
 
     def show_sync_actions_menu(self):
-
         menu = QMenu(self)
 
         actions = [
@@ -655,7 +667,7 @@ class MainWindow(QMainWindow):
             ("Re-clone All", self.sync_reclone_all, "Re-clone all repositories"),
             ("---", None, None),
             ("Download All Repositories", self.download_all_repositories_as_zip,
-             "Download all repositories as ZIP archives")
+             "Download all repositories as ZIP archives"),
         ]
 
         for text, callback, tooltip in actions:
@@ -666,7 +678,7 @@ class MainWindow(QMainWindow):
                 action.setToolTip(tooltip)
                 action.triggered.connect(callback)
 
-        menu.exec(self.sync_actions_btn.mapToGlobal(self.sync_actions_btn.rect().bottomLeft()))
+        menu.exec_(self.sync_actions_btn.mapToGlobal(self.sync_actions_btn.rect().bottomLeft()))
 
     def create_progress_bar(self, parent_layout):
         self.progress_bar = QProgressBar()
@@ -690,60 +702,52 @@ class MainWindow(QMainWindow):
         status_bar.addPermanentWidget(self.updates_label)
 
     def get_total_repos(self):
-        return self.app_state.get('repositories')
+        return self.app_state.data.repositories
 
     def get_total_repos_count(self):
-        repos = self.get_total_repos()
-        return len(repos)
+        return len(self.get_total_repos())
 
     def get_local_repos(self):
-        repos = self.get_total_repos()
-        local_repos = [repo for repo in repos if repo.local_exists]
-        return local_repos
+        return [repo for repo in self.get_total_repos() if repo.local_exists]
 
     def get_local_repos_count(self):
-        repos = self.get_total_repos()
-        local_repos = [repo for repo in repos if repo.local_exists]
-        return len(local_repos)
+        return len(self.get_local_repos())
 
     def get_need_update_repos(self):
-        repos = self.get_total_repos()
-        need_update_repos = [repo for repo in repos if repo.need_update]
-        return need_update_repos
+        return [repo for repo in self.get_total_repos() if repo.need_update]
 
     def get_need_update_repos_count(self):
-        repos = self.get_total_repos()
-        need_update_repos = [repo for repo in repos if repo.need_update]
-        return len(need_update_repos)
+        return len(self.get_need_update_repos())
 
     def update_info_panel(self):
         try:
             self.update_token_info_panel()
             self.update_network_info_panel()
 
-            total_repos = self.get_total_repos_count()
-            local_repos = self.get_local_repos_count()
-            needs_update = self.get_need_update_repos_count()
+            d = self.app_state.data
+            total_repos = d.repositories_count if d.repositories_count else self.get_total_repos_count()
+            local_repos = d.local_repositories_count if d.local_repositories_count else self.get_local_repos_count()
+            needs_update = d.needs_update_count if d.needs_update_count else self.get_need_update_repos_count()
 
             repos_lines = [
                 f"Total: {total_repos}",
                 f"Local: {local_repos}",
-                f"Updates: {needs_update}"
+                f"Updates: {needs_update}",
             ]
 
             for i, line in enumerate(repos_lines):
                 if i < len(self.repos_stats_widget.line_labels):
                     self.repos_stats_widget.line_labels[i].setText(line)
 
-            user_data = self.app_state.get('user_data', {})
-            user_name = user_data.get('name', '---') if user_data else '---'
-            public_repos = user_data.get('public_repos', 0) if user_data else 0
-            followers = user_data.get('followers', 0) if user_data else 0
+            user_data: UserData = d.user_data
+            user_name = user_data.name if user_data and user_data.name else '---'
+            public_repos = user_data.public_repos if user_data else 0
+            followers = user_data.followers if user_data else 0
 
             user_lines = [
                 f"Name: {user_name}",
                 f"Public: {public_repos}",
-                f"Followers: {followers}"
+                f"Followers: {followers}",
             ]
 
             for i, line in enumerate(user_lines):
@@ -755,9 +759,11 @@ class MainWindow(QMainWindow):
 
     def update_stats(self):
         try:
-            total = self.get_total_repos_count()
-            local = self.get_local_repos_count()
-            updates = self.get_need_update_repos_count()
+            d = self.app_state.data
+
+            total = d.repositories_count if d.repositories_count else self.get_total_repos_count()
+            local = d.local_repositories_count if d.local_repositories_count else self.get_local_repos_count()
+            updates = d.needs_update_count if d.needs_update_count else self.get_need_update_repos_count()
 
             self.total_repos_label.setText(f"Repositories: {total}")
             self.local_repos_label.setText(f"Local: {local}")
@@ -773,7 +779,7 @@ class MainWindow(QMainWindow):
 
             needs_update_or_clone = self.get_need_update_repos_count()
 
-            update_text = f"🔄 Update ({needs_update_or_clone})"
+            update_text = f"Update ({needs_update_or_clone})"
             self.update_available_btn.setText(update_text)
             self.update_available_btn.setVisible(needs_update_or_clone > 0)
 
@@ -783,18 +789,18 @@ class MainWindow(QMainWindow):
 
                 tooltip_parts = []
                 if need_clone > 0:
-                    tooltip_parts.append(f"📥 {need_clone} need cloning")
+                    tooltip_parts.append(f"{need_clone} need cloning")
                 if need_update > 0:
-                    tooltip_parts.append(f"🔄 {need_update} need updating")
+                    tooltip_parts.append(f"{need_update} need updating")
 
                 tooltip = " | ".join(tooltip_parts)
                 self.update_available_btn.setToolTip(tooltip)
             else:
                 local_count = len([r for r in repositories if getattr(r, 'local_exists', False)])
                 if local_count > 0:
-                    self.update_available_btn.setToolTip(f"✅ All {local_count} repositories are up to date")
+                    self.update_available_btn.setToolTip(f"All {local_count} repositories are up to date")
                 else:
-                    self.update_available_btn.setToolTip("📁 No repositories available")
+                    self.update_available_btn.setToolTip("No repositories available")
 
         except Exception as e:
             print(f"Error updating button: {e}")
@@ -806,13 +812,11 @@ class MainWindow(QMainWindow):
         self.preloader.start()
 
     def _on_checkup_complete(self, success: bool, message: str):
-
         if success:
             self._force_update_ui()
             self.preloader.close()
             self.show()
             self.status_label.setText("Ready")
-
 
             self.activateWindow()
             self.raise_()
@@ -821,14 +825,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 "Initialization Failed",
-                f"System checkup failed: {message}\n\nPlease restart the application."
+                f"System checkup failed: {message}\n\nPlease restart the application.",
             )
             self.close()
 
     def _force_update_ui(self, wait_dialog=None):
         try:
-            current_user = self.app_state.get('current_user')
-            current_token = self.app_state.get('current_token')
+            d = self.app_state.data
+            current_user = d.current_user
+            current_token = d.current_token
 
             if current_user and current_token:
                 self.sync_manager.set_user(current_user, current_token)
@@ -841,10 +846,10 @@ class MainWindow(QMainWindow):
                     if sync_stats:
                         self.app_state.update(
                             local_repositories_count=sync_stats.get('local', 0),
-                            needs_update_count=sync_stats.get('needs_update', 0)
+                            needs_update_count=sync_stats.get('needs_update', 0),
                         )
 
-                self.user_btn.setText(f"👤 {current_user}")
+                self.user_btn.setText(f"@{current_user}")
                 self.user_btn.setVisible(True)
             else:
                 self.user_btn.setVisible(False)
@@ -852,7 +857,7 @@ class MainWindow(QMainWindow):
             self.update_token_info_panel()
             self.update_info_panel()
 
-            repositories = self.app_state.get('repositories', [])
+            repositories = d.repositories
 
             if repositories:
                 self.repo_table.set_repositories(repositories)
@@ -862,7 +867,9 @@ class MainWindow(QMainWindow):
             self.update_stats()
 
         except Exception as e:
+            print(f"Error in _force_update_ui: {e}")
             traceback.print_exc()
+
         if wait_dialog:
             wait_dialog.close()
 
@@ -872,7 +879,7 @@ class MainWindow(QMainWindow):
         dialog.update_requested.connect(self.update_single_repository)
         dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
         dialog.delete_requested.connect(self.delete_local_repository)
-        dialog.exec()
+        dialog.exec_()
 
     def open_repository_in_browser(self, repo):
         if hasattr(repo, 'html_url') and repo.html_url:
@@ -883,11 +890,11 @@ class MainWindow(QMainWindow):
                     self,
                     "Browser Error",
                     f"Failed to open browser: {str(e)}",
-                    QMessageBox.StandardButton.Ok
+                    QMessageBox.Ok,
                 )
 
     def open_local_repository_folder(self, repo):
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -906,7 +913,7 @@ class MainWindow(QMainWindow):
                 self,
                 "Folder Not Found",
                 f"Local repository folder doesn't exist:\n{repo_path}",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
             return
 
@@ -922,11 +929,11 @@ class MainWindow(QMainWindow):
                 self,
                 "Error",
                 f"Cannot open folder: {str(e)}",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
 
     def clone_repository(self, repo):
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -935,23 +942,24 @@ class MainWindow(QMainWindow):
             self,
             "Clone Repository",
             f"Clone repository '{repo.name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
-        dialog = SyncDialog(username, [repo], self)
-        dialog.start_sync("clone")
-        result = dialog.exec()
+        token = self.app_state.data.current_token
+        dialog = SyncDialog(username, token, [repo], "clone_missing", self)
+        dialog.start_sync()
+        result = dialog.exec_()
 
-        if result == QDialog.DialogCode.Accepted:
+        if result == QDialog.Accepted:
             self.repo_table.update_repository_status(repo.name, True, False)
             QTimer.singleShot(1000, self._force_update_ui)
 
     def update_single_repository(self, repo):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -961,7 +969,7 @@ class MainWindow(QMainWindow):
                 self,
                 "Cannot Update",
                 f"Repository '{repo.name}' is not cloned locally",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
             return
 
@@ -969,22 +977,22 @@ class MainWindow(QMainWindow):
             self,
             "Update Repository",
             f"Update repository '{repo.name}'?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, [repo], "update_needed", self)
         dialog.start_sync()
-        result = dialog.exec()
+        result = dialog.exec_()
 
-        if result == QDialog.DialogCode.Accepted:
+        if result == QDialog.Accepted:
             self.repo_table.update_repository_status(repo.name, True, False)
             QTimer.singleShot(1000, self._force_update_ui)
 
     def delete_local_repository(self, repo):
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -993,10 +1001,10 @@ class MainWindow(QMainWindow):
             self,
             "Delete Local Repository",
             f"Delete local copy of '{repo.name}'?\n\nThis will only remove the local files, not the remote repository.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         structure_service = StructureService()
@@ -1018,7 +1026,7 @@ class MainWindow(QMainWindow):
                     self,
                     "Success",
                     f"Local copy of '{repo.name}' deleted",
-                    QMessageBox.StandardButton.Ok
+                    QMessageBox.Ok,
                 )
 
                 QTimer.singleShot(1000, self._force_update_ui)
@@ -1026,8 +1034,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(
                     self,
                     "Not Found",
-                    f"Local repository folder doesn't exist",
-                    QMessageBox.StandardButton.Ok
+                    "Local repository folder doesn't exist",
+                    QMessageBox.Ok,
                 )
 
         except Exception as e:
@@ -1035,15 +1043,15 @@ class MainWindow(QMainWindow):
                 self,
                 "Error",
                 f"Failed to delete: {str(e)}",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
 
     def clone_repositories_batch(self, repos):
         if not repos:
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1053,16 +1061,16 @@ class MainWindow(QMainWindow):
             self,
             "Clone Repositories",
             f"Clone {len(repos)} repositories?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, repos, "clone_missing", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             for repo in repos:
                 self.repo_table.update_repository_status(repo.name, True, False)
             QTimer.singleShot(1000, self._force_update_ui)
@@ -1071,8 +1079,8 @@ class MainWindow(QMainWindow):
         if not repos:
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1082,16 +1090,16 @@ class MainWindow(QMainWindow):
             self,
             "Update Repositories",
             f"Update {len(repos)} repositories?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, repos, "update_needed", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             for repo in repos:
                 self.repo_table.update_repository_status(repo.name, True, False)
             QTimer.singleShot(1000, self._force_update_ui)
@@ -1100,8 +1108,8 @@ class MainWindow(QMainWindow):
         if not repos:
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1113,17 +1121,17 @@ class MainWindow(QMainWindow):
             f"Re-clone {len(repos)} repositories?\n\n"
             f"This will DELETE local copies and clone them again from GitHub.\n"
             f"This action cannot be undone!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, repos, "reclone_all", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             for repo in repos:
                 self.repo_table.update_repository_status(repo.name, True, False)
 
@@ -1131,7 +1139,7 @@ class MainWindow(QMainWindow):
                 self,
                 "Success",
                 f"{len(repos)} repositories re-cloned successfully.",
-                QMessageBox.StandardButton.Ok
+                QMessageBox.Ok,
             )
 
             QTimer.singleShot(1000, self._force_update_ui)
@@ -1140,7 +1148,7 @@ class MainWindow(QMainWindow):
         if not repos:
             return
 
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -1149,11 +1157,11 @@ class MainWindow(QMainWindow):
             self,
             "Delete Local Copies",
             f"Delete local copies of {len(repos)} repositories?\n\nThis action cannot be undone!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         structure_service = StructureService()
@@ -1183,19 +1191,18 @@ class MainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Success",
-                f"Deleted {deleted_count} local copies"
+                f"Deleted {deleted_count} local copies",
             )
 
         QTimer.singleShot(1000, self._force_update_ui)
-
 
     def update_available_repositories(self):
         self._start_sync_operation("update_needed")
 
     def _start_sync_operation(self, operation: str):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
-        repositories = self.app_state.get('repositories', [])
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
+        repositories = self.app_state.data.repositories
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1213,8 +1220,6 @@ class MainWindow(QMainWindow):
         if operation == "sync_all":
             repos_to_sync = repositories
             operation_description = f"Synchronize All ({len(repos_to_sync)} repositories)"
-
-
 
         elif operation == "update_needed":
             repos_to_sync = []
@@ -1261,7 +1266,7 @@ class MainWindow(QMainWindow):
             "update_needed": "Update Needed",
             "clone_missing": "Clone Missing",
             "sync_with_repair": "Sync with Repair",
-            "reclone_all": "Re-clone All"
+            "reclone_all": "Re-clone All",
         }
 
         repo_info = self._get_repositories_info(repos_to_sync, operation)
@@ -1272,18 +1277,18 @@ class MainWindow(QMainWindow):
             f"{operation_description}\n\n"
             f"{repo_info}\n\n"
             f"Do you want to continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, repos_to_sync, operation, self)
         dialog.start_sync()
 
-        if dialog.exec():
-            repositories = self.app_state.get('repositories', [])
+        if dialog.exec_():
+            repositories = self.app_state.data.repositories
 
             if repositories:
                 self.repo_table.set_repositories(repositories)
@@ -1300,24 +1305,20 @@ class MainWindow(QMainWindow):
             ])
             if need_update_count == 0:
                 return "All local repositories are up to date!"
-            else:
-                return "No repositories need updating."
+            return "No repositories need updating."
 
         elif operation == "clone_missing":
             missing_count = len([r for r in repositories if not getattr(r, 'local_exists', False)])
             if missing_count == 0:
                 return "All repositories are already cloned locally!"
-            else:
-                return "No repositories to clone."
+            return "No repositories to clone."
 
         elif operation == "sync_all":
             if len(repositories) == 0:
                 return "No repositories available."
-            else:
-                return "No repositories to sync."
+            return "No repositories to sync."
 
-        else:
-            return "No repositories available for this operation."
+        return "No repositories available for this operation."
 
     def _get_repositories_info(self, repos_to_sync: list, operation: str) -> str:
         if not repos_to_sync:
@@ -1330,14 +1331,14 @@ class MainWindow(QMainWindow):
         info_lines = []
 
         if operation == "sync_all":
-            info_lines.append(f"• Total repositories: {len(repos_to_sync)}")
-            info_lines.append(f"• Local repositories: {local_count}")
-            info_lines.append(f"• Remote repositories: {len(repos_to_sync) - local_count}")
+            info_lines.append(f"- Total repositories: {len(repos_to_sync)}")
+            info_lines.append(f"- Local repositories: {local_count}")
+            info_lines.append(f"- Remote repositories: {len(repos_to_sync) - local_count}")
             if need_update_count > 0:
-                info_lines.append(f"• Need update: {need_update_count}")
+                info_lines.append(f"- Need update: {need_update_count}")
 
         elif operation == "update_needed":
-            info_lines.append(f"• Repositories needing update: {len(repos_to_sync)}")
+            info_lines.append(f"- Repositories needing update: {len(repos_to_sync)}")
             if len(repos_to_sync) <= 10:
                 for repo in repos_to_sync[:10]:
                     info_lines.append(f"  - {repo.name}")
@@ -1345,7 +1346,7 @@ class MainWindow(QMainWindow):
                     info_lines.append(f"  ... and {len(repos_to_sync) - 10} more")
 
         elif operation == "clone_missing":
-            info_lines.append(f"• Repositories to clone: {len(repos_to_sync)}")
+            info_lines.append(f"- Repositories to clone: {len(repos_to_sync)}")
             if len(repos_to_sync) <= 10:
                 for repo in repos_to_sync[:10]:
                     info_lines.append(f"  - {repo.name}")
@@ -1353,32 +1354,32 @@ class MainWindow(QMainWindow):
                     info_lines.append(f"  ... and {len(repos_to_sync) - 10} more")
 
         elif operation == "reclone_all":
-            info_lines.append(f"⚠️ WARNING: This will DELETE and re-clone {len(repos_to_sync)} repositories")
-            info_lines.append(f"• Total repositories: {len(repos_to_sync)}")
-            info_lines.append(f"• Private repositories: {private_count}")
-            info_lines.append(f"• This action cannot be undone!")
+            info_lines.append(f"WARNING: This will DELETE and re-clone {len(repos_to_sync)} repositories")
+            info_lines.append(f"- Total repositories: {len(repos_to_sync)}")
+            info_lines.append(f"- Private repositories: {private_count}")
+            info_lines.append(f"- This action cannot be undone!")
 
         return "\n".join(info_lines)
 
     def show_user_info(self):
         dialog = UserInfoDialog(self.app_state, self)
-        dialog.exec()
+        dialog.exec_()
 
     def show_token_info(self):
         dialog = TokenInfoDialog(self.app_state, self)
-        dialog.exec()
+        dialog.exec_()
 
     def show_folder_info(self):
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if username:
             dialog = StorageManagementDialog(self.app_state, self)
-            dialog.exec()
+            dialog.exec_()
         else:
             QMessageBox.warning(self, "Warning", "No user selected")
 
     def show_network_info(self):
         dialog = NetworkInfoDialog(self.app_state, self)
-        dialog.exec()
+        dialog.exec_()
 
     def sync_all_repositories(self):
         self._start_sync_operation("sync_all")
@@ -1390,41 +1391,41 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             "Sync with Repair",
-            "⚠️ This operation will:\n"
+            "This operation will:\n"
             "1. Check all repositories for corruption\n"
             "2. Re-clone corrupted repositories\n"
             "3. Update all working repositories\n\n"
             "This may take longer than normal sync.\n\n"
             "Continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
+        if reply == QMessageBox.Yes:
             self._start_sync_operation("sync_with_repair")
 
     def sync_reclone_all(self):
         reply = QMessageBox.warning(
             self,
             "Warning - Re-clone All",
-            "⚠️ This will delete and re-clone ALL repositories.\n\n"
+            "This will delete and re-clone ALL repositories.\n\n"
             "This cannot be undone! Continue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
+        if reply == QMessageBox.Yes:
             self._start_sync_operation("reclone_all")
 
     def _show_documentation(self):
         try:
             webbrowser.open("https://github.com/smartlegionlab/smart-repository-manager-gui")
-        except:
+        except Exception:
             QMessageBox.information(
                 self,
                 "Documentation",
                 "GitHub Repository: https://github.com/smartlegionlab/smart-repository-manager-gui\n\n"
-                "Please visit the GitHub repository for documentation and issues."
+                "Please visit the GitHub repository for documentation and issues.",
             )
 
     def _show_keyboard_shortcuts(self):
@@ -1436,7 +1437,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
 
-        title_label = QLabel("📋 Keyboard Shortcuts")
+        title_label = QLabel("Keyboard Shortcuts")
         title_label.setStyleSheet("""
             font-size: 16px;
             font-weight: bold;
@@ -1475,7 +1476,7 @@ class MainWindow(QMainWindow):
             ("File", [
                 ("Ctrl+B", "Create Archive"),
                 ("F5", "Refresh"),
-                ("Ctrl+Q", "Exit")
+                ("Ctrl+Q", "Exit"),
             ]),
             ("Synchronization", [
                 ("Ctrl+S", "Synchronize All"),
@@ -1493,19 +1494,19 @@ class MainWindow(QMainWindow):
                 ("Ctrl+L", "Open Local Folder"),
                 ("Ctrl+D", "Show Details"),
                 ("Ctrl+R", "Refresh List"),
-                ("Ctrl+Del", "Delete Local Copy")
+                ("Ctrl+Del", "Delete Local Copy"),
             ]),
             ("Tools", [
                 ("Ctrl+I", "User Information"),
                 ("Ctrl+T", "Token Information"),
                 ("Ctrl+Shift+N", "Network Information"),
-                ("Ctrl+Shift+M", "Storage Management")
+                ("Ctrl+Shift+M", "Storage Management"),
             ]),
             ("Help", [
                 ("F1", "Documentation"),
                 ("Ctrl+/", "Keyboard shortcuts"),
                 ("Ctrl+Shift+A", "About"),
-            ])
+            ]),
         ]
 
         for category, items in shortcuts:
@@ -1554,60 +1555,55 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-        main_layout.addWidget(close_btn, 0, Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(close_btn, 0, Qt.AlignCenter)
 
-        dialog.exec()
+        dialog.exec_()
 
-    def _refresh_all(self):
-        self.status_label.setText("Refreshing...")
+    def _build_wait_dialog(self, title: str, message: str) -> QDialog:
         wait_dialog = QDialog(self)
-        wait_dialog.setWindowTitle("Refreshing...")
+        wait_dialog.setWindowTitle(title)
         wait_dialog.setFixedSize(300, 150)
-        wait_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        wait_dialog.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        wait_dialog.setWindowModality(Qt.ApplicationModal)
+        wait_dialog.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
 
         layout = QVBoxLayout(wait_dialog)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
-        wait_label = QLabel("⏳")
-        wait_label.setStyleSheet("font-size: 40px;")
-        wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        text_label = QLabel("Refreshing...\nPlease wait...")
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_label = QLabel(message)
+        text_label.setAlignment(Qt.AlignCenter)
         text_label.setStyleSheet("font-size: 14px; color: #b0b0b0;")
-
-        layout.addWidget(wait_label)
         layout.addWidget(text_label)
 
+        progress = QProgressBar()
+        progress.setRange(0, 0)  # indeterminate
+        progress.setTextVisible(False)
+        progress.setFixedHeight(6)
+        progress.setStyleSheet(f"""
+            QProgressBar {{
+                border: none;
+                background-color: {ModernDarkTheme.BORDER_COLOR};
+                border-radius: 3px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {ModernDarkTheme.PRIMARY_COLOR};
+                border-radius: 3px;
+            }}
+        """)
+        layout.addWidget(progress)
+
+        return wait_dialog
+
+    def _refresh_all(self):
+        self.status_label.setText("Refreshing...")
+        wait_dialog = self._build_wait_dialog("Refreshing...", "Refreshing...\nPlease wait...")
         wait_dialog.show()
         QTimer.singleShot(100, lambda: self._force_update_ui(wait_dialog))
         self.status_label.setText("Ready")
 
     def _refresh_repository_table(self):
         self.status_label.setText("Refreshing...")
-        wait_dialog = QDialog(self)
-        wait_dialog.setWindowTitle("Refreshing...")
-        wait_dialog.setFixedSize(300, 150)
-        wait_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        wait_dialog.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
-
-        layout = QVBoxLayout(wait_dialog)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
-
-        wait_label = QLabel("⏳")
-        wait_label.setStyleSheet("font-size: 40px;")
-        wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        text_label = QLabel("Refreshing...\nPlease wait...")
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet("font-size: 14px; color: #b0b0b0;")
-
-        layout.addWidget(wait_label)
-        layout.addWidget(text_label)
-
+        wait_dialog = self._build_wait_dialog("Refreshing...", "Refreshing...\nPlease wait...")
         wait_dialog.show()
         QTimer.singleShot(100, lambda: self._refresh_repositories(wait_dialog))
         self.status_label.setText("Ready")
@@ -1619,8 +1615,8 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "No repositories selected")
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1630,16 +1626,16 @@ class MainWindow(QMainWindow):
             self,
             "Sync Selected",
             f"Synchronize {len(selected_repos)} selected repositories?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, selected_repos, "sync_all", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             self._force_update_ui()
 
     def _clone_selected_repositories(self):
@@ -1655,8 +1651,8 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Information", "All selected repositories are already cloned locally")
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1666,16 +1662,16 @@ class MainWindow(QMainWindow):
             self,
             "Clone Selected",
             f"Clone {len(repos_to_clone)} selected repositories?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, repos_to_clone, "clone_missing", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             self._force_update_ui()
 
     def _update_selected_repositories(self):
@@ -1691,8 +1687,8 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Information", "No local repositories selected")
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
@@ -1702,22 +1698,22 @@ class MainWindow(QMainWindow):
             self,
             "Update Selected",
             f"Update {len(local_repos)} selected repositories?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
         dialog = SyncDialog(username, token, local_repos, "update_needed", self)
         dialog.start_sync()
 
-        if dialog.exec():
+        if dialog.exec_():
             self._force_update_ui()
 
     def download_all_repositories_as_zip(self):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
-        repositories = self.app_state.get('repositories', [])
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
+        repositories = self.app_state.data.repositories
 
         if not username:
             QMessageBox.warning(self, "Warning", "No user selected")
@@ -1736,11 +1732,11 @@ class MainWindow(QMainWindow):
                 f"Found {len(private_repos)} private repositories that require a token.\n\n"
                 f"Without a token, only public repositories will be downloaded.\n\n"
                 f"Continue with public repositories only?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
             )
 
-            if reply != QMessageBox.StandardButton.Yes:
+            if reply != QMessageBox.Yes:
                 return
 
             repositories = [r for r in repositories if not getattr(r, 'private', False)]
@@ -1750,17 +1746,17 @@ class MainWindow(QMainWindow):
             return
 
         dialog = RepoDownloadDialog(repositories, token, username, self)
-        dialog.exec()
+        dialog.exec_()
 
     def download_repositories_batch(self, repos):
         if not repos:
             return
 
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         dialog = RepoDownloadDialog(repos, token, username, self)
-        dialog.exec()
+        dialog.exec_()
 
     def _open_selected_in_browser(self):
         selected_repos = self._get_selected_repositories()
@@ -1788,7 +1784,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "No repositories selected")
             return
 
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -1814,7 +1810,7 @@ class MainWindow(QMainWindow):
                         subprocess.run(['open', str(repo_path)], check=False)
                     opened_count += 1
                 except Exception as e:
-                    print(f"Error: {3}")
+                    print(f"Error: {e}")
 
         if opened_count > 0:
             QMessageBox.information(self, "Success", f"Opened {opened_count} local folders")
@@ -1837,14 +1833,16 @@ class MainWindow(QMainWindow):
         dialog.update_requested.connect(self.update_single_repository)
         dialog.reclone_requested.connect(lambda r: self.reclone_repositories_batch([r]))
         dialog.delete_requested.connect(self.delete_local_repository)
-        dialog.exec()
+        dialog.exec_()
 
     def _refresh_repositories(self, wait_dialog):
-        username = self.app_state.get('current_user')
-        token = self.app_state.get('current_token')
+        username = self.app_state.data.current_user
+        token = self.app_state.data.current_token
 
         if not username or not token:
             QMessageBox.warning(self, "Warning", "No user selected or token not available")
+            if wait_dialog:
+                wait_dialog.close()
             return
 
         try:
@@ -1852,8 +1850,10 @@ class MainWindow(QMainWindow):
             success, repositories = github_service.fetch_user_repositories()
 
             if success:
-                self.app_state.set('repositories', repositories)
-                self.app_state.set('repositories_count', len(repositories))
+                self.app_state.update(
+                    repositories=repositories,
+                    repositories_count=len(repositories),
+                )
 
                 self._update_local_status()
 
@@ -1865,7 +1865,7 @@ class MainWindow(QMainWindow):
                 sync_service = SyncService()
                 update_results = sync_service.batch_check_repositories_need_update(
                     user_obj,
-                    repositories
+                    repositories,
                 )
                 check_time = time.time() - start_time
 
@@ -1874,13 +1874,12 @@ class MainWindow(QMainWindow):
                     if repo.name in update_results:
                         needs_update, message = update_results[repo.name]
                         repo.need_update = needs_update
-
                         if needs_update:
                             needs_update_count += 1
                     else:
                         repo.need_update = False
 
-                self.app_state.set('needs_update_count', needs_update_count)
+                self.app_state.update(needs_update_count=needs_update_count)
 
                 self.repo_table.set_repositories(repositories)
                 self.update_stats()
@@ -1890,18 +1889,18 @@ class MainWindow(QMainWindow):
                     "Success",
                     f"Loaded {len(repositories)} repositories\n"
                     f"{needs_update_count} require update\n"
-                    f"Check took {check_time:.1f}s"
+                    f"Check took {check_time:.1f}s",
                 )
             else:
                 QMessageBox.warning(self, "Warning", "Failed to load repositories")
 
         except Exception as e:
             print(f"[ERROR] _refresh_repositories failed: {e}")
-            import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "Error", f"Failed to refresh: {str(e)}")
 
-        wait_dialog.close()
+        if wait_dialog:
+            wait_dialog.close()
 
     def _delete_selected_local(self):
         selected_repos = self._get_selected_repositories()
@@ -1920,14 +1919,14 @@ class MainWindow(QMainWindow):
             self,
             "Delete Local Copies",
             f"Delete local copies of {len(local_repos)} repositories?\n\nThis action cannot be undone!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
         if not username:
             QMessageBox.warning(self, "Error", "No user selected")
             return
@@ -1960,7 +1959,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "Failed to delete local copies")
 
     def _create_user_archive(self):
-        username = self.app_state.get('current_user')
+        username = self.app_state.data.current_user
 
         if not username:
             QMessageBox.warning(self, "Warning", "No user selected")
@@ -1971,42 +1970,20 @@ class MainWindow(QMainWindow):
             "Create Archive",
             f"Create archive of user '{username}'?\n\n"
             f"This will create a ZIP archive containing all user data.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != QMessageBox.Yes:
             return
 
-        wait_dialog = QDialog(self)
-        wait_dialog.setWindowTitle("Creating archive")
-        wait_dialog.setFixedSize(300, 150)
-        wait_dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        wait_dialog.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
-
-        layout = QVBoxLayout(wait_dialog)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
-
-        wait_label = QLabel("⏳")
-        wait_label.setStyleSheet("font-size: 40px;")
-        wait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        text_label = QLabel("Creating archive...\nPlease wait...")
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet("font-size: 14px; color: #b0b0b0;")
-
-        layout.addWidget(wait_label)
-        layout.addWidget(text_label)
-
+        wait_dialog = self._build_wait_dialog("Creating archive", "Creating archive...\nPlease wait...")
         wait_dialog.show()
         QTimer.singleShot(100, lambda: self._perform_archive_creation(username, wait_dialog))
 
     def _perform_archive_creation(self, username: str, wait_dialog=None):
         try:
-
             storage_service = StorageService()
-
             result = storage_service.create_user_archive(username)
 
             if wait_dialog and wait_dialog.isVisible():
@@ -2020,27 +1997,27 @@ class MainWindow(QMainWindow):
                 file_count = result.get("file_count", 0)
 
                 details = (
-                    f"✅ archive created successfully!\n\n"
-                    f"📁 User: {username}\n"
-                    f"📦 Archive: {archive_name}\n"
-                    f"💾 Size: {archive_size}\n"
-                    f"📄 Files: {file_count}\n\n"
+                    f"Archive created successfully!\n\n"
+                    f"User: {username}\n"
+                    f"Archive: {archive_name}\n"
+                    f"Size: {archive_size}\n"
+                    f"Files: {file_count}\n\n"
                     f"Location:\n{archive_path}"
                 )
 
                 reply = QMessageBox.question(
                     self,
-                    "archive Created",
+                    "Archive Created",
                     details + "\n\nOpen archive folder?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    QMessageBox.Yes | QMessageBox.No,
                 )
 
-                if reply == QMessageBox.StandardButton.Yes:
+                if reply == QMessageBox.Yes:
                     archive_dir = Path(archive_path).parent
                     self._open_folder(archive_dir)
             else:
                 error_msg = result.get("error", "Unknown error")
-                QMessageBox.critical(self, "archive Error", f"Failed to create archive:\n{error_msg}")
+                QMessageBox.critical(self, "Archive Error", f"Failed to create archive:\n{error_msg}")
 
         except Exception as e:
             if wait_dialog and wait_dialog.isVisible():
@@ -2049,8 +2026,8 @@ class MainWindow(QMainWindow):
 
             QMessageBox.critical(
                 self,
-                "archive Error",
-                f"Error creating archive:\n{str(e)}"
+                "Archive Error",
+                f"Error creating archive:\n{str(e)}",
             )
 
     def _set_menu_actions_enabled(self, enabled: bool):
@@ -2066,9 +2043,6 @@ class MainWindow(QMainWindow):
     def _open_folder(self, folder_path: Path):
         try:
             if folder_path.exists():
-                import os
-                import subprocess
-
                 if os.name == 'nt':
                     os.startfile(str(folder_path))
                 elif os.name == 'posix':
@@ -2118,8 +2092,8 @@ class MainWindow(QMainWindow):
         return repositories
 
     def _update_local_status(self):
-        username = self.app_state.get('current_user')
-        repositories = self.app_state.get('repositories', [])
+        username = self.app_state.data.current_user
+        repositories = self.app_state.data.repositories
 
         if not username or not repositories:
             return
@@ -2141,8 +2115,10 @@ class MainWindow(QMainWindow):
             else:
                 repo.local_exists = False
 
-        self.app_state.set('local_repositories_count', local_count)
-        self.app_state.set('repositories', repositories)
+        self.app_state.update(
+            local_repositories_count=local_count,
+            repositories=repositories,
+        )
 
     def center_on_screen(self):
         screen = self.screen().geometry()
@@ -2159,26 +2135,24 @@ class MainWindow(QMainWindow):
         return Helpers.format_duration(seconds)
 
     def show_sync_summary(self, stats: Dict[str, Any], operation: str):
-        from PyQt5.QtWidgets import QMessageBox
-
         total_time = sum(stats.get('durations', []))
         avg_time = total_time / len(stats['durations']) if stats['durations'] else 0
 
         summary = f"{operation.upper()} SUMMARY\n"
         summary += "=" * 40 + "\n\n"
-        summary += "📊 Results:\n"
+        summary += "Results:\n"
 
         for key, value in stats.items():
             if key != "durations" and isinstance(value, int):
-                summary += f"  • {key.replace('_', ' ').title()}: {value}\n"
+                summary += f"  - {key.replace('_', ' ').title()}: {value}\n"
 
-        summary += f"\n⏱️ Performance:\n"
-        summary += f"  • Total time: {self.format_duration(total_time)}\n"
-        summary += f"  • Average per repo: {self.format_duration(avg_time)}"
+        summary += f"\nPerformance:\n"
+        summary += f"  - Total time: {self.format_duration(total_time)}\n"
+        summary += f"  - Average per repo: {self.format_duration(avg_time)}"
 
         QMessageBox.information(self, "Sync Summary", summary)
 
-    def on_state_changed(self, state: dict):
+    def on_state_changed(self, state):
         self.update_token_info_panel()
         self.update_info_panel()
         self.update_stats()
@@ -2188,11 +2162,11 @@ class MainWindow(QMainWindow):
             self,
             "Confirm Exit",
             "Are you sure you want to exit Smart Repository Manager?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
+        if reply == QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()

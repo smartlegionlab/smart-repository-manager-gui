@@ -288,26 +288,26 @@ class RepoDetailDialog(QDialog):
         actions_menu = QMenu(self)
 
         if not self.repository.local_exists:
-            clone_action = QAction("📥 Clone Repository", self)
+            clone_action = QAction("Clone Repository", self)
             clone_action.triggered.connect(self._on_clone_clicked)
             actions_menu.addAction(clone_action)
         else:
             if self.repository.need_update:
-                update_action = QAction("🔄 Update Repository", self)
+                update_action = QAction("Update Repository", self)
                 update_action.triggered.connect(self._on_update_clicked)
                 actions_menu.addAction(update_action)
 
-            reclone_action = QAction("🔄 Re-clone", self)
+            reclone_action = QAction("Re-clone", self)
             reclone_action.triggered.connect(self._on_reclone_clicked)
             actions_menu.addAction(reclone_action)
 
-            delete_action = QAction("🗑️ Delete Local", self)
+            delete_action = QAction("Delete Local", self)
             delete_action.triggered.connect(self._on_delete_clicked)
             actions_menu.addAction(delete_action)
 
         actions_menu.addSeparator()
 
-        browser_action = QAction("🌐 Open in Browser", self)
+        browser_action = QAction("Open in Browser", self)
         browser_action.triggered.connect(self.open_in_browser)
         actions_menu.addAction(browser_action)
 
@@ -391,38 +391,38 @@ class RepoDetailDialog(QDialog):
         actions_menu = QMenu(self)
 
         if not self.repository.local_exists:
-            clone_action = QAction("📥 Clone Repository", self)
+            clone_action = QAction("Clone Repository", self)
             clone_action.triggered.connect(self._on_clone_clicked)
             actions_menu.addAction(clone_action)
         else:
             if self.repository.need_update:
-                update_action = QAction("🔄 Update Repository", self)
+                update_action = QAction("Update Repository", self)
                 update_action.triggered.connect(self._on_update_clicked)
                 actions_menu.addAction(update_action)
 
-            reclone_action = QAction("🔄 Re-clone", self)
+            reclone_action = QAction("Re-clone", self)
             reclone_action.triggered.connect(self._on_reclone_clicked)
             actions_menu.addAction(reclone_action)
 
-            delete_action = QAction("🗑️ Delete Local", self)
+            delete_action = QAction("Delete Local", self)
             delete_action.triggered.connect(self._on_delete_clicked)
             actions_menu.addAction(delete_action)
 
         actions_menu.addSeparator()
 
-        download_action = QAction("📦 Download repository", self)
+        download_action = QAction("Download repository", self)
         download_action.triggered.connect(self._on_download_clicked)
         actions_menu.addAction(download_action)
 
-        browser_action = QAction("🌐 Open in Browser", self)
+        browser_action = QAction("Open in Browser", self)
         browser_action.triggered.connect(self.open_in_browser)
         actions_menu.addAction(browser_action)
 
         self.actions_menu_btn.setMenu(actions_menu)
 
     def _on_download_clicked(self):
-        token = self.app_state.get('current_token') if self.app_state else None
-        username = self.app_state.get('current_user') if self.app_state else None
+        token = self.app_state.data.current_token if self.app_state else None
+        username = self.app_state.data.current_user if self.app_state else None
 
         if hasattr(self.parent_window, 'repo_table'):
             selected_repos = self.parent_window.repo_table.get_selected_repositories()

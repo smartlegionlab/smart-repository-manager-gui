@@ -560,7 +560,7 @@ class RepoDownloadDialog(QDialog):
             }
         """)
 
-        self.open_folder_btn = QPushButton("📂 Open Download Folder")
+        self.open_folder_btn = QPushButton("Open Download Folder")
         self.open_folder_btn.setMinimumWidth(150)
         self.open_folder_btn.clicked.connect(self.open_download_folder)
         self.open_folder_btn.setEnabled(False)
@@ -637,12 +637,12 @@ class RepoDownloadDialog(QDialog):
         self.current_label.setText("Current: -")
 
         mode_text = "ALL BRANCHES"
-        self._add_log_entry(f"🚀 Starting PARALLEL download of {len(self.repositories)} repositories...",
+        self._add_log_entry(f"Starting PARALLEL download of {len(self.repositories)} repositories...",
                             "#4dabf7")
         self._add_log_entry(f"⚡ Using up to {max(1, self.cpu_count - 1)} parallel threads", "#4dabf7")
         self._add_log_entry(f"👤 User: @{self.username}" if self.username else "", "#4dabf7")
-        self._add_log_entry(f"📁 Mode: {mode_text}", "#4dabf7")
-        self._add_log_entry(f"📂 Target: {self.location_label.text()}", "#4dabf7")
+        self._add_log_entry(f"Mode: {mode_text}", "#4dabf7")
+        self._add_log_entry(f"Target: {self.location_label.text()}", "#4dabf7")
         self._add_log_entry("", "")
 
         self.worker = RepoDownloadWorker(
@@ -738,8 +738,8 @@ class RepoDownloadDialog(QDialog):
         self._add_log_entry(f"   • ✅ Successful: {stats['successful']}", "#4caf50")
         if stats['failed'] > 0:
             self._add_log_entry(f"   • ❌ Failed: {stats['failed']}", "#f44336")
-        self._add_log_entry(f"   • ⚡ Parallel threads used: {workers_used}", "#4dabf7")
-        self._add_log_entry(f"   • 📁 Location: {self.location_label.text()}", "#4dabf7")
+        self._add_log_entry(f"   • Parallel threads used: {workers_used}", "#4dabf7")
+        self._add_log_entry(f"   • Location: {self.location_label.text()}", "#4dabf7")
         self._add_log_entry("=" * 50, "#4dabf7")
 
         if stats['total'] > 1:
@@ -765,7 +765,7 @@ class RepoDownloadDialog(QDialog):
             self.worker.stop()
             self.worker.wait()
 
-        self._add_log_entry("⏹️ Download stopped by user", "#ff9800")
+        self._add_log_entry("Download stopped by user", "#ff9800")
         self.stop_btn.setEnabled(False)
         self.start_btn.setEnabled(True)
         self.mode_combo.setEnabled(True)

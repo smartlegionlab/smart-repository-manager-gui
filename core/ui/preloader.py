@@ -1,23 +1,27 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 import os
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import requests
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QFrame, QPushButton, QTextEdit, QHBoxLayout
 from PyQt5.QtGui import QFont, QIcon
-import sys
-from pathlib import Path
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QProgressBar, QFrame,
+    QPushButton, QTextEdit, QHBoxLayout,
+)
 
-from smart_repository_manager_core.services.github_service import GitHubService
-from smart_repository_manager_core.services.sync_service import SyncService
-
-from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.config_service import ConfigService
+from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.network_service import NetworkService
 from smart_repository_manager_core.services.structure_service import StructureService
-from core import  __version__ as ver
+from smart_repository_manager_core.services.sync_service import SyncService
+
+from core import __version__ as ver
+from core.models.state import UserData, TokenInfo, RateLimits
+from core.ui.dark_theme import ModernDarkTheme
 
 
 class SmartPreloader(QWidget):
@@ -39,7 +43,7 @@ class SmartPreloader(QWidget):
             ("Getting GitHub user data...", self.get_user_data),
             ("Loading repositories...", self.get_repositories),
             ("Checking local copies...", self.check_local_repos),
-            ("Checking for updates...", self.check_updates)
+            ("Checking for updates...", self.check_updates),
         ]
 
         self.setFixedSize(600, 500)
@@ -48,10 +52,8 @@ class SmartPreloader(QWidget):
         self._setup_ui()
 
     def setup_application_icon(self):
-        from pathlib import Path
         project_root = Path(__file__).parent.parent.parent
         icon_path = project_root / "data" / "icons" / "icon.png"
-
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
 
@@ -65,22 +67,22 @@ class SmartPreloader(QWidget):
         title_font.setPointSize(20)
         title_font.setBold(True)
         title.setFont(title_font)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR}; margin-bottom: 10px;")
 
         subtitle = QLabel("System Initialization")
         subtitle_font = QFont()
         subtitle_font.setPointSize(12)
         subtitle.setFont(subtitle_font)
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setAlignment(Qt.AlignCenter)
         subtitle.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; margin-bottom: 20px;")
 
         separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShape(QFrame.HLine)
         separator.setStyleSheet(f"background-color: {ModernDarkTheme.BORDER_COLOR}; height: 1px; margin: 10px 0;")
 
         self.step_label = QLabel("Preparing to start...")
-        self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.step_label.setAlignment(Qt.AlignCenter)
         self.step_label.setStyleSheet(f"""
             color: {ModernDarkTheme.TEXT_PRIMARY};
             font-size: 14px;
@@ -97,7 +99,7 @@ class SmartPreloader(QWidget):
         progress_layout.setContentsMargins(0, 10, 0, 10)
 
         self.progress_label = QLabel("0%")
-        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.progress_label.setAlignment(Qt.AlignCenter)
         self.progress_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 12px;")
 
         self.progress_bar = QProgressBar()
@@ -118,7 +120,7 @@ class SmartPreloader(QWidget):
         """)
 
         self.step_counter = QLabel(f"Step 0/{len(self.checkup_steps)}")
-        self.step_counter.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.step_counter.setAlignment(Qt.AlignCenter)
         self.step_counter.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 11px;")
 
         log_label = QLabel("Initialization Log")
@@ -184,7 +186,7 @@ class SmartPreloader(QWidget):
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
 
-        self._add_log_entry("🚀 Starting system checkup...", "#4dabf7")
+        self._add_log_entry("Starting system checkup...", "#4dabf7")
         QTimer.singleShot(500, self._run_next_step)
 
     def _run_next_step(self):
@@ -194,7 +196,7 @@ class SmartPreloader(QWidget):
 
         step_name, step_func = self.checkup_steps[self.current_step]
 
-        progress = int((self.current_step) / len(self.checkup_steps) * 100)
+        progress = int(self.current_step / len(self.checkup_steps) * 100)
         self.progress_bar.setValue(progress)
         self.progress_label.setText(f"{progress}%")
         self.step_counter.setText(f"Step {self.current_step + 1}/{len(self.checkup_steps)}")
@@ -223,7 +225,7 @@ class SmartPreloader(QWidget):
         from core.ui.dialogs.token_selection_dialog import TokenSelectionDialog
 
         dialog = TokenSelectionDialog(parent=self)
-        if dialog.exec():
+        if dialog.exec_():
             selected_user = dialog.get_selected_user()
             if selected_user:
                 config = self.config_service.load_config()
@@ -231,13 +233,13 @@ class SmartPreloader(QWidget):
                     self.config_service.set_active_user(selected_user)
                     self.app_state.set_multiple(
                         current_user=selected_user,
-                        current_token=config.users[selected_user]
+                        current_token=config.users[selected_user],
                     )
                     self._add_log_entry(f"✅ User selected: {selected_user}", "#4caf50")
                     self.current_step += 1
                     QTimer.singleShot(500, self._run_next_step)
                 else:
-                    self._add_log_entry(f"❌ User not found in config", "#ff4757")
+                    self._add_log_entry("❌ User not found in config", "#ff4757")
                     self._finish_checkup(False, "User selection failed")
             else:
                 self._add_log_entry("❌ No user selected", "#ff4757")
@@ -248,27 +250,21 @@ class SmartPreloader(QWidget):
 
     def check_structure(self) -> bool:
         try:
-
             config = self.config_service.load_config()
-
             config.set_version(ver)
-
             config.update_last_launch()
-
             self.config_service.save_config()
             self.config_service.load_config()
 
             base_dir = Path.home() / "smart_repository_manager"
-            base_dir_exists = base_dir.exists()
-
-            if not base_dir_exists:
+            if not base_dir.exists():
                 self._add_log_entry("⚠️ Base directory will be created when needed", "#ff9800")
 
             test_user = "_test_check"
             test_structure = self.structure_service.create_user_structure(test_user)
 
             if test_structure:
-                self._add_log_entry(f"✅ Directory structure works", "#4caf50")
+                self._add_log_entry("✅ Directory structure works", "#4caf50")
 
                 test_user_dir = base_dir / test_user
                 if test_user_dir.exists():
@@ -277,12 +273,12 @@ class SmartPreloader(QWidget):
 
                 self.app_state.log_result(True, "Directory structure check passed", {
                     "base_dir": str(base_dir),
-                    "config_loaded": True
+                    "config_loaded": True,
                 })
                 return True
-            else:
-                self._add_log_entry("❌ Failed to create structure", "#ff4757")
-                return False
+
+            self._add_log_entry("❌ Failed to create structure", "#ff4757")
+            return False
 
         except Exception as e:
             self._add_log_entry(f"❌ Structure error: {str(e)}", "#ff4757")
@@ -290,16 +286,13 @@ class SmartPreloader(QWidget):
 
     def check_internet(self) -> bool:
         try:
-            is_online = self.network_service.is_online()
-
-            if not is_online:
+            if not self.network_service.is_online():
                 self._add_log_entry("❌ Internet unavailable", "#ff4757")
                 self.app_state.update(network_status='offline', github_access=False)
                 return False
 
             network_check = self.network_service.check_network()
             successful_checks = sum(1 for r in network_check.detailed_results if r["success"])
-
             self._add_log_entry(f"✅ Internet available ({successful_checks}/4 servers)", "#4caf50")
 
             git_ok, git_msg = self.network_service.check_git_connectivity()
@@ -313,15 +306,12 @@ class SmartPreloader(QWidget):
             dns_ok, dns_msg, ip_addresses = self.network_service.check_dns_resolution("github.com")
             if dns_ok and ip_addresses:
                 self._add_log_entry(f"✅ DNS working: {dns_msg}", "#4caf50")
-                self.app_state.update(dns_working=True, github_ips=ip_addresses)
 
             external_ip = self.network_service.get_ip()
 
             self.app_state.update(
                 network_status='online',
-                external_ip=external_ip,
-                network_servers_available=successful_checks,
-                network_total_servers=4
+                external_ip=external_ip or "127.0.0.1",
             )
 
             self.app_state.log_result(
@@ -331,8 +321,8 @@ class SmartPreloader(QWidget):
                     "online": network_check.is_online,
                     "external_ip": external_ip,
                     "github_access": git_ok,
-                    "dns_working": dns_ok
-                }
+                    "dns_working": dns_ok,
+                },
             )
 
             return network_check.is_online
@@ -346,7 +336,7 @@ class SmartPreloader(QWidget):
         return True
 
     def get_user_data(self) -> bool:
-        token = self.app_state.get('current_token')
+        token = self.app_state.data.current_token
         if not token:
             self._add_log_entry("❌ No token available", "#ff4757")
             return False
@@ -359,40 +349,41 @@ class SmartPreloader(QWidget):
                 self._add_log_entry("❌ Invalid token", "#ff4757")
                 return False
 
-            user_data = {
-                'username': user.username,
-                'name': user.name,
-                'bio': user.bio,
-                'public_repos': user.public_repos,
-                'followers': user.followers,
-                'following': user.following,
-                'created_date': user.created_date,
-                'html_url': user.html_url,
-                'location': getattr(user, 'location', None),
-                'company': getattr(user, 'company', None),
-                'avatar_url': getattr(user, 'avatar_url', None)
-            }
+            user_data = UserData(
+                username=user.username,
+                name=user.name,
+                bio=user.bio,
+                public_repos=user.public_repos,
+                followers=user.followers,
+                following=user.following,
+                created_date=user.created_date,
+                html_url=user.html_url,
+                location=getattr(user, 'location', None),
+                company=getattr(user, 'company', None),
+                avatar_url=getattr(user, 'avatar_url', None),
+            )
 
             self.app_state.update(
                 current_user=user.username,
-                user_data=user_data
+                user_data=user_data,
             )
 
-            if hasattr(user, 'avatar_url') and user.avatar_url:
+            if user.avatar_url:
                 self.download_avatar(user.username, user.avatar_url)
 
             self._add_log_entry(f"✅ User: {user.username} ({user.name or 'No name'})", "#4caf50")
 
-            token_info = github_service.get_token_info()
+            token_obj = github_service.get_token_info()
 
-            token_data = {
-                'username': token_info.username,
-                'scopes': token_info.scopes or "Not specified",
-                'rate_limit': token_info.rate_limit,
-                'remaining': token_info.rate_remaining,
-                'created_at': token_info.created_at[:10] if token_info.created_at else "Unknown"
-            }
-            self.app_state.update(token_info=token_data)
+            token_info = TokenInfo(
+                username=token_obj.username,
+                scopes=token_obj.scopes or "Not specified",
+                rate_limit=token_obj.rate_limit,
+                remaining=token_obj.rate_remaining,
+                created_at=token_obj.created_at[:10] if token_obj.created_at else "Unknown",
+                token=token,
+            )
+            self.app_state.update(token_info=token_info)
 
             limits = github_service.check_rate_limits()
 
@@ -401,29 +392,31 @@ class SmartPreloader(QWidget):
                 try:
                     reset_time = datetime.fromtimestamp(int(limits["reset"]))
                     reset_time_str = reset_time.strftime("%Y-%m-%d %H:%M:%S")
-                except:
+                except Exception:
                     pass
 
-            rate_limits = {
-                'limit': limits.get('limit'),
-                'remaining': limits.get('remaining'),
-                'used': limits.get('limit', 0) - limits.get('remaining', 0) if limits.get('limit') else 0,
-                'reset': limits.get('reset'),
-                'reset_time': reset_time_str
-            }
+            rate_limits = RateLimits(
+                limit=limits.get('limit'),
+                remaining=limits.get('remaining'),
+                used=(limits.get('limit', 0) - limits.get('remaining', 0)) if limits.get('limit') else 0,
+                reset=limits.get('reset'),
+                reset_time=reset_time_str,
+            )
             self.app_state.update(rate_limits=rate_limits)
 
-            self._add_log_entry(f"API Limits: {limits.get('remaining', '?')}"
-                                f"/{limits.get('limit', '?')}", "#4dabf7")
+            self._add_log_entry(
+                f"API Limits: {limits.get('remaining', '?')}/{limits.get('limit', '?')}",
+                "#4dabf7",
+            )
 
             self.app_state.log_result(
                 True,
-                f"GitHub user data loaded",
+                "GitHub user data loaded",
                 {
                     "username": user.username,
                     "public_repos": user.public_repos,
-                    "token_scopes": token_info.scopes
-                }
+                    "token_scopes": token_obj.scopes,
+                },
             )
 
             return True
@@ -434,10 +427,8 @@ class SmartPreloader(QWidget):
 
     def download_avatar(self, username, avatar_url):
         try:
-
             user_dir = Path.home() / "smart_repository_manager" / username
             user_dir.mkdir(parents=True, exist_ok=True)
-
             avatar_path = user_dir / "avatar.png"
 
             response = requests.get(avatar_url, timeout=10)
@@ -449,8 +440,8 @@ class SmartPreloader(QWidget):
             print(f"Error downloading avatar: {e}")
 
     def get_repositories(self) -> bool:
-        token = self.app_state.get('current_token')
-        user = self.app_state.get('current_user')
+        token = self.app_state.data.current_token
+        user = self.app_state.data.current_user
 
         if not token or not user:
             self._add_log_entry("❌ User not set", "#ff4757")
@@ -464,7 +455,7 @@ class SmartPreloader(QWidget):
                 self._add_log_entry("❌ Failed to load repositories", "#ff4757")
                 return False
 
-            self.app_state.set('repositories', repositories)
+            self.app_state.update(repositories=repositories)
 
             total = len(repositories)
             private_count = sum(1 for r in repositories if r.private)
@@ -477,7 +468,7 @@ class SmartPreloader(QWidget):
                 total_private=private_count,
                 total_public=public_count,
                 total_forks=forks_count,
-                total_archived=archived_count
+                total_archived=archived_count,
             )
 
             self._add_log_entry(f"✅ Loaded {total} repositories", "#4caf50")
@@ -485,13 +476,13 @@ class SmartPreloader(QWidget):
 
             self.app_state.log_result(
                 True,
-                f"Repositories loaded",
+                "Repositories loaded",
                 {
                     "total": total,
                     "private": private_count,
                     "public": public_count,
-                    "forks": forks_count
-                }
+                    "forks": forks_count,
+                },
             )
 
             return True
@@ -501,8 +492,8 @@ class SmartPreloader(QWidget):
             return False
 
     def check_local_repos(self) -> bool:
-        user = self.app_state.get('current_user')
-        repositories = self.app_state.get('repositories', [])
+        user = self.app_state.data.current_user
+        repositories = self.app_state.data.repositories
 
         if not user or not repositories:
             self._add_log_entry("❌ No data available", "#ff4757")
@@ -528,19 +519,19 @@ class SmartPreloader(QWidget):
 
             self.app_state.update(
                 local_repositories_count=local_count,
-                storage_path=str(user_structure["user"])
+                storage_path=str(user_structure["user"]),
             )
 
             self._add_log_entry(f"✅ Local copies: {local_count}/{len(repositories)}", "#4caf50")
 
             self.app_state.log_result(
                 True,
-                f"Local repository check",
+                "Local repository check",
                 {
                     "total": len(repositories),
                     "local": local_count,
-                    "missing": len(repositories) - local_count
-                }
+                    "missing": len(repositories) - local_count,
+                },
             )
 
             return True
@@ -550,8 +541,8 @@ class SmartPreloader(QWidget):
             return False
 
     def check_updates(self) -> bool:
-        user = self.app_state.get('current_user')
-        repositories = self.app_state.get('repositories', [])
+        user = self.app_state.data.current_user
+        repositories = self.app_state.data.repositories
 
         if not user or not repositories:
             self._add_log_entry("❌ No data to check updates", "#ff4757")
@@ -574,7 +565,7 @@ class SmartPreloader(QWidget):
 
             all_update_status = self.sync_service.batch_check_repositories_need_update(
                 user_obj,
-                repositories
+                repositories,
             )
 
             batch_time = time.time() - batch_start
@@ -582,7 +573,6 @@ class SmartPreloader(QWidget):
             needs_update_count = 0
 
             for repo in repositories:
-
                 repo_path = repos_path / repo.name
 
                 if not repo_path.exists() or not (repo_path / '.git').exists():
@@ -592,7 +582,7 @@ class SmartPreloader(QWidget):
 
                 needs_update, message = all_update_status.get(
                     repo.name,
-                    (True, "Not checked in batch")
+                    (True, "Not checked in batch"),
                 )
 
                 repo.need_update = needs_update
@@ -600,8 +590,11 @@ class SmartPreloader(QWidget):
                 if needs_update:
                     needs_update_count += 1
 
-            self.app_state.set('needs_update_count', needs_update_count)
-            self._add_log_entry(f"✅ Updates needed: {needs_update_count}/{len(repositories)}", "#4caf50")
+            self.app_state.update(needs_update_count=needs_update_count)
+            self._add_log_entry(
+                f"✅ Updates needed: {needs_update_count}/{len(repositories)}",
+                "#4caf50",
+            )
 
             self.app_state.log_result(
                 True,
@@ -609,8 +602,8 @@ class SmartPreloader(QWidget):
                 {
                     "needs_update": needs_update_count,
                     "total": len(repositories),
-                    "check_time_seconds": batch_time
-                }
+                    "check_time_seconds": batch_time,
+                },
             )
 
             return True
@@ -623,16 +616,12 @@ class SmartPreloader(QWidget):
             return False
 
     def _add_log_entry(self, message: str, color: str = None):
-        from datetime import datetime
         timestamp = datetime.now().strftime("%H:%M:%S")
-
         if color:
             html = f'<span style="color: {color};">[{timestamp}] {message}</span>'
         else:
             html = f'[{timestamp}] {message}'
-
         self.log_text.append(html)
-
         scrollbar = self.log_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
@@ -641,13 +630,14 @@ class SmartPreloader(QWidget):
             self.progress_bar.setValue(100)
             self.progress_label.setText("100%")
             self.step_label.setText("✅ Initialization complete")
-            self._add_log_entry(f"\n🎉 {message}", "#4caf50")
+            self._add_log_entry(f"\n{message}", "#4caf50")
 
             self.cancel_button.setText("Continue")
-            self.cancel_button.clicked.disconnect()
-
+            try:
+                self.cancel_button.clicked.disconnect()
+            except Exception:
+                pass
             self.cancel_button.clicked.connect(self._on_continue_clicked)
-
             self.retry_button.hide()
         else:
             self.step_label.setText("❌ Initialization failed")
@@ -660,10 +650,8 @@ class SmartPreloader(QWidget):
     def _on_continue_clicked(self):
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText("Preparing...")
-
         self.step_label.setText("Starting main application...")
         self._add_log_entry("Loading main window...", "#4dabf7")
-
         QTimer.singleShot(500, self._emit_success_signal)
 
     def _emit_success_signal(self):
@@ -676,7 +664,9 @@ class SmartPreloader(QWidget):
         self.retry_button.hide()
         self.cancel_button.setEnabled(True)
         self.cancel_button.setText("Cancel")
-        self.cancel_button.clicked.disconnect()
+        try:
+            self.cancel_button.clicked.disconnect()
+        except Exception:
+            pass
         self.cancel_button.clicked.connect(self.cancel_checkup)
         self.start()
-

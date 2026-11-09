@@ -530,58 +530,58 @@ class RepoTable(QWidget):
 
             if local_count > 0:
                 if update_count > 0:
-                    update_selected_action = QAction(f"🔄 Update Available ({update_count})", self)
+                    update_selected_action = QAction(f"Update Available ({update_count})", self)
                     update_selected_action.triggered.connect(lambda: self.update_repositories_batch.emit(
                         [r for r in selected_repos if
                          getattr(r, 'local_exists', False) and getattr(r, 'need_update', False)]
                     ))
                     menu.addAction(update_selected_action)
 
-                reclone_selected_action = QAction(f"🔄 Re-clone All Local ({local_count})", self)
+                reclone_selected_action = QAction(f"Re-clone All Local ({local_count})", self)
                 reclone_selected_action.triggered.connect(lambda: self.reclone_repositories_batch.emit(
                     [r for r in selected_repos if getattr(r, 'local_exists', False)]
                 ))
                 menu.addAction(reclone_selected_action)
 
-                delete_selected_action = QAction(f"🗑️ Delete All Local ({local_count})", self)
+                delete_selected_action = QAction(f"Delete All Local ({local_count})", self)
                 delete_selected_action.triggered.connect(lambda: self.delete_repositories_batch.emit(
                     [r for r in selected_repos if getattr(r, 'local_exists', False)]
                 ))
                 menu.addAction(delete_selected_action)
 
                 menu.addSeparator()
-                download_selected_action = QAction(f"📦 Download repositories ({len(selected_repos)})", self)
+                download_selected_action = QAction(f"Download repositories ({len(selected_repos)})", self)
                 download_selected_action.triggered.connect(
                     lambda: self.download_repositories_batch.emit(selected_repos))
                 menu.addAction(download_selected_action)
 
         else:
             if not repo.local_exists:
-                clone_action = QAction("📥 Clone Repository", self)
+                clone_action = QAction("Clone Repository", self)
                 clone_action.triggered.connect(lambda: self.clone_repositories_batch.emit(
                     [r for r in selected_repos if not getattr(r, 'local_exists', False)]
                 ))
                 menu.addAction(clone_action)
             else:
                 if repo.need_update:
-                    update_action = QAction("🔄 Update Repository", self)
+                    update_action = QAction("Update Repository", self)
                     update_action.triggered.connect(lambda: self.update_repositories_batch.emit(
                         [r for r in selected_repos if
                          getattr(r, 'local_exists', False) and getattr(r, 'need_update', False)]
                     ))
                     menu.addAction(update_action)
 
-                reclone_action = QAction("🔄 Re-clone Repository", self)
+                reclone_action = QAction("Re-clone Repository", self)
                 reclone_action.triggered.connect(lambda: self.reclone_repositories_batch.emit(
                     [r for r in selected_repos if getattr(r, 'local_exists', False)]
                 ))
                 menu.addAction(reclone_action)
 
-                open_local_action = QAction("📂 Open Local Folder", self)
+                open_local_action = QAction("Open Local Folder", self)
                 open_local_action.triggered.connect(lambda: self.open_local_folder_requested.emit(repo))
                 menu.addAction(open_local_action)
 
-                delete_action = QAction("🗑️ Delete Local Copy", self)
+                delete_action = QAction("Delete Local Copy", self)
                 delete_action.triggered.connect(lambda: self.delete_repositories_batch.emit(
                     [r for r in selected_repos if getattr(r, 'local_exists', False)]
                 ))
@@ -589,15 +589,15 @@ class RepoTable(QWidget):
 
             menu.addSeparator()
 
-            download_action = QAction("📦 Download Repository", self)
+            download_action = QAction("Download Repository", self)
             download_action.triggered.connect(lambda: self.download_repositories_batch.emit([repo]))
             menu.addAction(download_action)
 
-            open_browser_action = QAction("🌐 Open in Browser", self)
+            open_browser_action = QAction("Open in Browser", self)
             open_browser_action.triggered.connect(lambda: self.open_in_browser_requested.emit(repo))
             menu.addAction(open_browser_action)
 
-            details_action = QAction("ℹ️ Show Details", self)
+            details_action = QAction("Show Details", self)
             details_action.triggered.connect(lambda: self.show_details_requested.emit(repo))
             menu.addAction(details_action)
 
