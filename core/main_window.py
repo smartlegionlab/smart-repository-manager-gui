@@ -10,7 +10,7 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, Any
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
@@ -23,9 +23,10 @@ from PyQt6.QtWidgets import (
     QDialog,
     QMenu,
     QScrollArea,
+    QAction,
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QAction, QKeySequence, QIcon
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QKeySequence, QIcon
 from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
 from smart_repository_manager_core.services.sync_service import SyncService
@@ -805,7 +806,6 @@ class MainWindow(QMainWindow):
         self.preloader.start()
 
     def _on_checkup_complete(self, success: bool, message: str):
-        print(f"Checkup complete: success={success}, message={message}")
 
         if success:
             self._force_update_ui()
@@ -2159,7 +2159,7 @@ class MainWindow(QMainWindow):
         return Helpers.format_duration(seconds)
 
     def show_sync_summary(self, stats: Dict[str, Any], operation: str):
-        from PyQt6.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox
 
         total_time = sum(stats.get('durations', []))
         avg_time = total_time / len(stats['durations']) if stats['durations'] else 0

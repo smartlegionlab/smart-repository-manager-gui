@@ -1,4 +1,5 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -443,7 +444,7 @@ class StorageService:
                 "git_info": {}
             }
 
-            for root, dirs, files in Path(repo_path).walk():
+            for root, dirs, files in os.walk(repo_path):
                 info["folder_count"] += len(dirs)
                 info["file_count"] += len(files)
 

@@ -1,13 +1,13 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 from datetime import datetime
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGroupBox, QGridLayout,
     QWidget, QMessageBox, QProgressBar,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
 import subprocess
 import os
@@ -130,7 +130,7 @@ class StorageManagementDialog(QDialog):
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(10)
 
-        from PyQt6.QtWidgets import QTabWidget
+        from PyQt5.QtWidgets import QTabWidget
         self.tab_widget = QTabWidget()
 
         self.overview_tab = self.create_overview_tab()
@@ -636,7 +636,7 @@ class StorageManagementDialog(QDialog):
         if msg_box.exec() != QMessageBox.StandardButton.Ok:
             return
 
-        from PyQt6.QtWidgets import QInputDialog
+        from PyQt5.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(
             self, "Confirmation",
             "Type 'DELETE-ALL' to confirm:"

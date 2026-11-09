@@ -4,9 +4,9 @@ import time
 from datetime import datetime
 
 import requests
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QFrame, QPushButton, QTextEdit, QHBoxLayout
-from PyQt6.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QFrame, QPushButton, QTextEdit, QHBoxLayout
+from PyQt5.QtGui import QFont, QIcon
 import sys
 from pathlib import Path
 

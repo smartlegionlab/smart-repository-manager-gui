@@ -1,13 +1,13 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 from pathlib import Path
 import requests
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QGroupBox, QGridLayout,
     QWidget, QScrollArea, QMessageBox
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QPixmap, QPainter, QColor, QPainterPath
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor, QPainterPath
 from smart_repository_manager_core.services.github_service import GitHubService
 
 from core.ui.dark_theme import ModernDarkTheme

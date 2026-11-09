@@ -1,12 +1,13 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 import webbrowser
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget, QGridLayout, QTextEdit, QGroupBox, QFrame, QMessageBox, QMenu
+    QScrollArea, QWidget, QGridLayout, QTextEdit, QGroupBox, QFrame, QMessageBox, QMenu,
+    QAction
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QFont, QAction
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtGui import QFont
 from smart_repository_manager_core.core.models.repository import Repository
 
 from core.ui.dark_theme import ModernDarkTheme

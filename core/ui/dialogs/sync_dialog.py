@@ -2,12 +2,12 @@
 from datetime import datetime
 from typing import List, Dict, Any
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit, QWidget, QMessageBox
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QFont
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread
+from PyQt5.QtGui import QFont
 from smart_repository_manager_core.core.models.repository import Repository
 
 from core.ui.dark_theme import ModernDarkTheme

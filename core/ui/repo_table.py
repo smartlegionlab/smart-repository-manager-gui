@@ -1,11 +1,11 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView,
     QProgressBar, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QComboBox, QLineEdit, QMenu
+    QComboBox, QLineEdit, QMenu, QAction
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QBrush, QColor
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor
 
 from core.ui.dark_theme import ModernDarkTheme
 

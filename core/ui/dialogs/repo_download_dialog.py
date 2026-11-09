@@ -5,14 +5,14 @@ import multiprocessing
 import concurrent.futures
 import threading
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QProgressBar, QTextEdit, QWidget,
     QMessageBox, QGroupBox, QFrame, QScrollArea,
     QComboBox, QGridLayout
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QFont
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QFont
 from smart_repository_manager_core.services.download_service import DownloadService
 
 from core.ui.dark_theme import ModernDarkTheme

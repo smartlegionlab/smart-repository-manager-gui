@@ -2,13 +2,13 @@
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QListWidget, QListWidgetItem, QAbstractItemView,
     QWidget, QMessageBox, QLineEdit
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QPixmap, QPainter, QPainterPath
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont, QPixmap, QPainter, QPainterPath
 
 from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.config_service import ConfigService

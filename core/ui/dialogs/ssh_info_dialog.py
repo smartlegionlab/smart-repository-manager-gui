@@ -1,12 +1,12 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QGroupBox, QGridLayout,
     QWidget, QScrollArea, QMessageBox,
     QComboBox, QLineEdit, QProgressBar, QTextEdit
 )
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtGui import QFont
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QFont
 
 from core.ui.dark_theme import ModernDarkTheme
 from smart_repository_manager_core.services.ssh_service import SSHService
@@ -712,7 +712,7 @@ class SSHInfoDialog(QDialog):
             QMessageBox.critical(self, "Error", message)
 
     def copy_to_clipboard(self, text):
-        from PyQt6.QtWidgets import QApplication
+        from PyQt5.QtWidgets import QApplication
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
         QMessageBox.information(self, "Copied", "Public key copied to clipboard!")

@@ -191,7 +191,7 @@ The application allows you to create desktop entries directly from the menu:
 - Python 3.8+
 - Git installed and configured
 - GitHub Personal Access Token (with `repo` scope)
-- PyQt6
+- PyQt5
 
 ### Generate GitHub Token
 1. Visit [GitHub Tokens](https://github.com/settings/tokens/new)

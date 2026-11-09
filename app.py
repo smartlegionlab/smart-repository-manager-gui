@@ -1,6 +1,5 @@
-# Copyright (©) 2026, Alexander Suvorov. All rights reserved.
 import sys
-from PyQt6.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication
 
 from core.main_window import MainWindow
 from core.ui.dark_theme import ModernDarkTheme
@@ -10,7 +9,7 @@ def main():
     app = QApplication(sys.argv)
     ModernDarkTheme.apply(app)
     window = MainWindow()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":

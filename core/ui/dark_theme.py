@@ -1,5 +1,5 @@
 # Copyright (©) 2026, Alexander Suvorov. All rights reserved.
-from PyQt6.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor
 
 
 class ModernDarkTheme:
