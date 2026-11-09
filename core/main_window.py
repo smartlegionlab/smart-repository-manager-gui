@@ -24,9 +24,10 @@ from PyQt5.QtWidgets import (
     QMenu,
     QScrollArea,
     QAction,
+    QTextBrowser,
 )
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QKeySequence, QIcon
+from PyQt5.QtCore import Qt, QTimer, QUrl
+from PyQt5.QtGui import QFont, QKeySequence, QIcon, QDesktopServices
 
 from smart_repository_manager_core.services.github_service import GitHubService
 from smart_repository_manager_core.services.structure_service import StructureService
@@ -1417,16 +1418,144 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             self._start_sync_operation("reclone_all")
 
-    def _show_documentation(self):
+    def _find_help_path(self) -> Path:
+        project_root = Path(__file__).parent.parent
+        candidates = [
+            project_root / "data" / "help.md",
+            project_root / "data" / "HELP.md",
+            project_root / "data" / "Help.md",
+        ]
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return candidate
+        return project_root / "data" / "help.md"
+
+    def _build_documentation_dialog(self, content_markdown: str, source_name: str) -> QDialog:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Help")
+        dialog.setMinimumSize(800, 700)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
+
+        title_label = QLabel("Help")
+        title_font = QFont()
+        title_font.setPointSize(16)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_label.setStyleSheet(f"color: {ModernDarkTheme.PRIMARY_COLOR}; padding: 4px;")
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
+
+        source_label = QLabel(source_name)
+        source_label.setStyleSheet(f"color: {ModernDarkTheme.TEXT_SECONDARY}; font-size: 11px;")
+        source_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(source_label)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(False)
+        browser.setOpenLinks(False)
+        browser.setStyleSheet(f"""
+            QTextBrowser {{
+                background-color: {ModernDarkTheme.CARD_BG};
+                border: 1px solid {ModernDarkTheme.BORDER_COLOR};
+                border-radius: 6px;
+                color: {ModernDarkTheme.TEXT_PRIMARY};
+                font-size: 13px;
+                padding: 12px;
+            }}
+            QScrollBar:vertical {{
+                border: none;
+                background: #1a1a1a;
+                width: 12px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: #555;
+                border-radius: 6px;
+                min-height: 30px;
+            }}
+        """)
+        browser.setHtml(self._render_markdown_to_html(content_markdown))
+        browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
+        layout.addWidget(browser, 1)
+
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.setMinimumWidth(120)
+        close_btn.setFixedHeight(BUTTON_FIXED_HEIGHT)
+        close_btn.clicked.connect(dialog.accept)
+        close_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {ModernDarkTheme.PRIMARY_COLOR};
+                color: white;
+                font-weight: bold;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+            }}
+            QPushButton:hover {{
+                background-color: #1a75ff;
+            }}
+        """)
+        button_layout.addWidget(close_btn)
+
+        layout.addLayout(button_layout)
+
+        return dialog
+
+    def _render_markdown_to_html(self, markdown_text: str) -> str:
         try:
-            webbrowser.open("https://github.com/smartlegionlab/smart-repository-manager-gui")
+            from PyQt5.QtGui import QTextDocument
+            doc = QTextDocument()
+            doc.setMarkdown(markdown_text)
+            return doc.toHtml()
         except Exception:
-            QMessageBox.information(
-                self,
-                "Documentation",
-                "GitHub Repository: https://github.com/smartlegionlab/smart-repository-manager-gui\n\n"
-                "Please visit the GitHub repository for documentation and issues.",
+            safe = (
+                markdown_text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\n", "<br>")
             )
+            return f"<pre style='white-space: pre-wrap;'>{safe}</pre>"
+
+    def _show_documentation(self):
+        help_path = self._find_help_path()
+
+        if not help_path.exists() or not help_path.is_file():
+            fallback = (
+                "# Smart Repository Manager - Help\n\n"
+                "The in-app help file was not found.\n\n"
+                f"Expected location:\n\n    {help_path}\n\n"
+                "You can restore it by cloning the repository or downloading\n"
+                "`data/help.md` from:\n\n"
+                "    https://github.com/smartlegionlab/smart-repository-manager-gui\n\n"
+                "Online documentation is also available at the same URL.\n"
+            )
+            dialog = self._build_documentation_dialog(fallback, "In-app help (not found)")
+            dialog.exec_()
+            return
+
+        try:
+            content = help_path.read_text(encoding="utf-8")
+        except Exception as e:
+            fallback = (
+                "# Smart Repository Manager - Help\n\n"
+                f"Failed to read the help file: {e}\n\n"
+                f"Path: {help_path}\n\n"
+                "Online documentation:\n\n"
+                "    https://github.com/smartlegionlab/smart-repository-manager-gui\n"
+            )
+            dialog = self._build_documentation_dialog(fallback, "In-app help (unreadable)")
+            dialog.exec_()
+            return
+
+        dialog = self._build_documentation_dialog(content, "In-app help")
+        dialog.exec_()
 
     def _show_keyboard_shortcuts(self):
         dialog = QDialog(self)
@@ -1576,7 +1705,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(text_label)
 
         progress = QProgressBar()
-        progress.setRange(0, 0)  # indeterminate
+        progress.setRange(0, 0)
         progress.setTextVisible(False)
         progress.setFixedHeight(6)
         progress.setStyleSheet(f"""
