@@ -4,7 +4,7 @@ set -e
 REPO_URL="https://github.com/smartlegionlab/smart-repository-manager-gui.git"
 APP_NAME="Smart Repository Manager"
 APP_ID="smart-repository-manager-gui"
-APP_VERSION="1.3.1"
+APP_VERSION="1.3.2"
 INSTALL_DIR="$HOME/.local/share/$APP_ID"
 VENV_DIR="$INSTALL_DIR/venv"
 APPS_DIR="$HOME/.local/share/applications"
